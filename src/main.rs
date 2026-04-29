@@ -4,6 +4,7 @@ mod app;
 mod config;
 mod db;
 mod routes;
+mod app_state;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
