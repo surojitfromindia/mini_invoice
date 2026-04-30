@@ -3,6 +3,7 @@ use crate::entity::user_entity::UserStatus;
 use crate::service_cotext::ServiceContext;
 use crate::utils::date_helpers::DateHelper;
 use sea_orm::{ActiveModelTrait, Set};
+use crate::utils::id_generator::IdGenerator;
 
 pub struct CreateUser {
     first_name: String,
@@ -12,8 +13,9 @@ pub struct CreateUser {
 }
 
 pub async fn create_user(ctx: &ServiceContext, payload: CreateUser) {
+    let public_id = IdGenerator::get_user_id();
     let user = user_entity::ActiveModel {
-        public_id: Set("ABC".to_owned()),
+        public_id: Set(public_id),
         first_name: Set(payload.first_name),
         last_name: Set(payload.last_name),
         email: Set(payload.email),
@@ -23,7 +25,6 @@ pub async fn create_user(ctx: &ServiceContext, payload: CreateUser) {
         updated_at: Set(DateHelper::now().value()),
         ..Default::default()
     };
-
     let user: user_entity::Model = user
         .insert(&ctx.app_state.primary_write_replica)
         .await
