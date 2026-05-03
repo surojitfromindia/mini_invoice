@@ -9,6 +9,7 @@ mod service_cotext;
 mod service;
 mod utils;
 mod api;
+mod errors;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

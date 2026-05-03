@@ -1,5 +1,7 @@
-use crate::entity::user_entity;
+use crate::entity::user_entity as UserEntity;
 use crate::entity::user_entity::UserStatus;
+use crate::errors::app_error::AppError;
+use crate::errors::user_service_errors::UserServiceError;
 use crate::service_cotext::ServiceContext;
 use crate::utils::date_helpers::DateHelper;
 use crate::utils::id_generator::IdGenerator;
@@ -14,22 +16,45 @@ pub struct CreateUserAccount {
     pub password: String,
 }
 
+pub struct UserService;
 
-pub async fn create_user_account(ctx: &ServiceContext, payload: CreateUserAccount) {
-    let public_id = IdGenerator::get_user_id();
-    let user = user_entity::ActiveModel {
-        public_id: Set(public_id),
-        first_name: Set(payload.first_name),
-        last_name: Set(payload.last_name),
-        email: Set(payload.email),
-        email_verified: Set(false),
-        status: Set(UserStatus::Active),
-        created_at: Set(DateHelper::now().value()),
-        updated_at: Set(DateHelper::now().value()),
-        ..Default::default()
-    };
-    let user: user_entity::Model = user
-        .insert(&ctx.app_state.primary_write_replica)
-        .await
-        .unwrap();
+impl UserService {
+    pub async fn create_user_account(
+        ctx: &ServiceContext,
+        payload: CreateUserAccount,
+    ) -> Result<String, AppError> {
+        // check is email exists.
+        if UserService::check_email_is_registered(ctx, &payload.email).await? {
+            return Err(UserServiceError::EmailAlreadyExists.into());
+        }
+
+        let public_id = IdGenerator::get_user_id();
+        let user = UserEntity::ActiveModel {
+            public_id: Set(public_id),
+            first_name: Set(payload.first_name),
+            last_name: Set(payload.last_name),
+            email: Set(payload.email.clone()),
+            email_verified: Set(false),
+            status: Set(UserStatus::Active),
+            created_at: Set(DateHelper::now().value()),
+            updated_at: Set(DateHelper::now().value()),
+            ..Default::default()
+        };
+        let user: UserEntity::Model = user
+            .insert(&ctx.app_state.primary_write_replica)
+            .await
+            .unwrap();
+        Ok(payload.email)
+    }
+
+    async fn check_email_is_registered(
+        ctx: &ServiceContext,
+        email: impl Into<String>,
+    ) -> Result<bool, AppError> {
+        UserEntity::Entity::find_by_email(email.into())
+            .one(&ctx.app_state.primary_read_replica)
+            .await
+            .map(|x| x.is_some())
+            .map_err(AppError::DatabaseError) // 👈 DbErr stops here
+    }
 }
