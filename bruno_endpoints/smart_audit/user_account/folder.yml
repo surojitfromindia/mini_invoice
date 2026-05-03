@@ -1,0 +1,7 @@
+info:
+  name: user_account
+  type: folder
+  seq: 1
+
+request:
+  auth: inherit

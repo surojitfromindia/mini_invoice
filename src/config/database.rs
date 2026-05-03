@@ -1,5 +1,6 @@
 use sea_orm::ConnectOptions;
 use std::time::Duration;
+use tracing::info;
 
 pub fn db_options(database_url: &str) -> ConnectOptions {
     let mut opt = ConnectOptions::new(database_url);
@@ -10,7 +11,7 @@ pub fn db_options(database_url: &str) -> ConnectOptions {
         .sqlx_logging(false)
         .after_connect(|_conn| {
             Box::pin(async move {
-                println!("DB connected");
+                info!("DB connected");
                 Ok(())
             })
         });

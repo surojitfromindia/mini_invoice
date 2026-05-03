@@ -1,0 +1,24 @@
+info:
+  name: Reigter new user account
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{base_url_api_v1}}/user_account/create_account"
+  body:
+    type: json
+    data: |-
+      {
+        "first_name": "surojit",
+        "last_name": "paul",
+        "email": "surojit99923@gmail.com",
+        "password": "22212233212nnc"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

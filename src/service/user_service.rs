@@ -2,17 +2,20 @@ use crate::entity::user_entity;
 use crate::entity::user_entity::UserStatus;
 use crate::service_cotext::ServiceContext;
 use crate::utils::date_helpers::DateHelper;
-use sea_orm::{ActiveModelTrait, Set};
 use crate::utils::id_generator::IdGenerator;
+use sea_orm::{ActiveModelTrait, Set};
+use serde::Deserialize;
 
-pub struct CreateUser {
-    first_name: String,
-    last_name: String,
-    email: String,
-    password: String,
+#[derive(Deserialize)]
+pub struct CreateUserAccount {
+    pub first_name: String,
+    pub last_name: String,
+    pub email: String,
+    pub password: String,
 }
 
-pub async fn create_user(ctx: &ServiceContext, payload: CreateUser) {
+
+pub async fn create_user_account(ctx: &ServiceContext, payload: CreateUserAccount) {
     let public_id = IdGenerator::get_user_id();
     let user = user_entity::ActiveModel {
         public_id: Set(public_id),

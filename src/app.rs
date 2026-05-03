@@ -2,7 +2,11 @@ use crate::app_state::AppState;
 use crate::config;
 use crate::db::connection::{init_read_replica_db, init_write_replica_db};
 use axum::Router;
+use axum::routing::get;
+use tower_http::trace::TraceLayer;
+use tracing::info;
 use crate::config::tracing::init_tracing;
+use crate::api;
 
 pub async fn create_app() -> anyhow::Result<Router> {
     let settings = config::load()?;
@@ -17,9 +21,15 @@ pub async fn create_app() -> anyhow::Result<Router> {
         primary_write_replica,
     };
 
-    println!("Server started");
+    info!("Server started");
     let app = Router::new()
-        .merge(crate::routes::create_routes())
+        .route("/health", get(check_health))
+        .merge(api::routes::create_routes())
+        .layer(TraceLayer::new_for_http())
         .with_state(app_state);
     Ok(app)
+}
+
+async fn check_health()-> &'static str {
+    "I am fine!"
 }

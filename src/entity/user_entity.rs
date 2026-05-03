@@ -15,7 +15,7 @@ pub enum UserStatus {
 #[sea_orm(table_name = "users")]
 pub struct Model {
     #[sea_orm(primary_key)]
-    pub id: u64,
+    pub id: i32,
     #[sea_orm(unique)]
     pub public_id: String,
     pub first_name: String,
