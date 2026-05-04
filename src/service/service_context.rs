@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use crate::app_state::AppState;
 
 pub struct ServiceContext {

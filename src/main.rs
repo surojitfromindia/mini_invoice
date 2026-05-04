@@ -5,7 +5,6 @@ mod config;
 mod db;
 mod app_state;
 mod entity;
-mod service_cotext;
 mod service;
 mod utils;
 mod api;
