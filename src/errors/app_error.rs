@@ -5,6 +5,7 @@ use crate::errors::user_service_errors::UserServiceError;
 pub enum AppError {
     User(UserServiceError),
     DatabaseError(sea_orm::DbErr),
+    InternalServerError(String),
 }
 
 impl AppError {
@@ -47,6 +48,13 @@ impl AppError {
                         http_code: HttpErrorCode::InternalServerError,
                     },
                 }
+            },
+            AppError::InternalServerError(error_message)=>{
+                ErrorMeta {
+                    code: "100.000.000.00",
+                    message: "",
+                    http_code: HttpErrorCode::InternalServerError,
+                }
             }
         }
     }
@@ -61,6 +69,12 @@ pub enum HttpErrorCode {
 impl From<UserServiceError> for AppError {
     fn from(err: UserServiceError) -> Self {
         AppError::User(err)
+    }
+}
+
+impl From<sea_orm::DbErr> for AppError {
+    fn from(err: sea_orm::DbErr) -> Self {
+        AppError::DatabaseError(err)
     }
 }
 
