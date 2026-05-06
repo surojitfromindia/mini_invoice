@@ -9,14 +9,6 @@ impl AuthService {
         
         Ok(true)
     }
-    
-    async fn login_with_google(){
-        
-    }
-    
-    
-    async fn login_with_microsoft(){
-        
-    }
+
     
 }

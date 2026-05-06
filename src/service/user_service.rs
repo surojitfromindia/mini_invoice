@@ -18,12 +18,6 @@ pub struct CreateUserAccount {
 }
 
 
-#[derive(Deserialize)]
-pub struct CreateUserAccountWithOutPassword {
-    pub first_name: String,
-    pub last_name: String,
-    pub email: String,
-}
 
 pub struct UserService;
 
@@ -48,27 +42,7 @@ impl UserService {
         }).await?;
         Ok(email)
     }
-
-    pub async fn create_user_account_without_password(
-        ctx: &ServiceContext,
-        payload: CreateUserAccountWithOutPassword,
-    ) -> Result<String, AppError> {
-        let email = payload.email.clone();
-        // check is email exists.
-        if UserService::check_email_is_registered(ctx, &email).await? {
-            return Err(UserServiceError::EmailAlreadyExists.into());
-        }
-
-        let user = Self::prepare_user(payload.first_name, payload.last_name, payload.email);
-        ctx.app_state.primary_write_replica.transaction::<_,(), AppError>(|txn|{
-            Box::pin(async move {
-                let user: UserEntity::Model = user.insert(txn).await?;
-                Ok(())
-            })
-        }).await?;
-
-        Ok(email)
-    }
+    
 
     fn prepare_user(first_name: String, last_name:String, email: String)-> UserEntity::ActiveModel{
         let public_id = IdGenerator::get_user_id();
