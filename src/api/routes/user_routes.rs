@@ -1,11 +1,11 @@
 use crate::api::api_response::ApiResponse;
 use crate::app_state::AppState;
 use crate::errors::app_error::AppError;
+use crate::service::service_context::ServiceContext;
 use crate::service::user_service::{CreateUserAccount, UserService};
 use axum::extract::State;
 use axum::routing::post;
 use axum::{Json, Router};
-use crate::service::service_context::ServiceContext;
 
 pub fn routes() -> Router<AppState> {
     Router::new().route("/create_account", post(create_account_handler))

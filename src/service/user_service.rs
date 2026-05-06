@@ -3,11 +3,11 @@ use crate::entity::user_entity::{self as UserEntity, UserStatus};
 use crate::errors::app_error::AppError;
 use crate::errors::user_service_errors::UserServiceError;
 use crate::service::service_context::ServiceContext;
+use crate::service::user_credential_service::UserCredentialService;
 use crate::utils::date_helpers::DateHelper;
 use crate::utils::id_generator::IdGenerator;
 use sea_orm::{ActiveModelTrait, Set, TransactionTrait};
 use serde::Deserialize;
-use crate::service::user_credential_service::UserCredentialService;
 
 #[derive(Deserialize)]
 pub struct CreateUserAccount {
@@ -44,11 +44,14 @@ impl UserService {
             ..Default::default()
         };
 
-        // insert data with transaction
-        let txn = ctx.app_state.primary_write_replica.begin().await?;
-        let user: UserEntity::Model = user.insert(&txn).await?;
-        UserCredentialService::save_credential(&txn, user.id, payload.password).await?;
-        txn.commit().await?;
+        ctx.app_state.primary_write_replica.transaction::<_,(), AppError>(|txn|{
+            Box::pin(async move {
+                // insert data with transaction
+                let user: UserEntity::Model = user.insert(txn).await?;
+                UserCredentialService::save_credential(txn, user.id, payload.password).await?;
+                Ok(())
+            })
+        }).await?;
 
         Ok(email)
     }

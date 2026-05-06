@@ -11,7 +11,7 @@ impl UserServiceError {
         match self {
             UserServiceError::EmailAlreadyExists => ErrorMeta {
                 code: "100.000.0001",
-                message: "Email already exists",
+                message: "Email already exists".to_string(),
                 http_code: HttpErrorCode::Conflict,
             },
         }

@@ -1,12 +1,12 @@
+use crate::api;
 use crate::app_state::AppState;
 use crate::config;
+use crate::config::tracing::init_tracing;
 use crate::db::connection::{init_read_replica_db, init_write_replica_db};
-use axum::Router;
 use axum::routing::get;
+use axum::Router;
 use tower_http::trace::TraceLayer;
 use tracing::info;
-use crate::config::tracing::init_tracing;
-use crate::api;
 
 pub async fn create_app() -> anyhow::Result<Router> {
     let settings = config::load()?;

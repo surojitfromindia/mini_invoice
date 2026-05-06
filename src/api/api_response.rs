@@ -1,7 +1,7 @@
 use crate::errors::app_error::{AppError, HttpErrorCode};
-use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use axum::Json;
 use serde::Serialize;
 
 #[derive(Serialize)]
