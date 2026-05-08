@@ -70,4 +70,6 @@ impl UserService {
             .map(|x| x.is_some())
             .map_err(AppError::DatabaseError)
     }
+    
+    
 }

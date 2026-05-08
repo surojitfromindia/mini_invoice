@@ -14,9 +14,9 @@ pub enum SignInLogEventType {
     RefreshToken,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize,FromJsonQueryResult)]
+#[derive(Default,Debug, Clone, PartialEq, Serialize, Deserialize,FromJsonQueryResult)]
 pub struct RequestContext {
-    pub ip_address: String,
+    pub ip_address: Option<String>,
     pub user_agent: Option<String>,
     pub device: Option<String>,
     pub os: Option<String>,
@@ -25,12 +25,12 @@ pub struct RequestContext {
 
 #[sea_orm::model]
 #[derive(Debug, Clone, PartialEq, DeriveEntityModel)]
-#[sea_orm(table_name = "sign_in_logs")]
+#[sea_orm(table_name = "login_logs")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: i32,
     pub user_id: Option<i32>,
-    pub identifier: String,
+    pub identifier: String, // email string.
     pub created_at: DateTimeUtc,
     pub event_type: SignInLogEventType,
     pub request_context: RequestContext
