@@ -1,11 +1,14 @@
-use std::fmt;
-use sea_orm::{DbErr, TransactionError};
 use crate::errors::error_meta::ErrorMeta;
+use crate::errors::user_credential_service_errors::UserCredentialServiceError;
 use crate::errors::user_service_errors::UserServiceError;
+use sea_orm::{DbErr, TransactionError};
+use std::fmt;
 
 #[derive(Debug)]
 pub enum AppError {
     User(UserServiceError),
+    UserCredential(UserCredentialServiceError),
+    Unauthorized,
     DatabaseError(DbErr),
     InternalServerError(String),
 }
@@ -14,6 +17,12 @@ impl AppError {
     pub fn get_meta(&self) -> ErrorMeta {
         match self {
             AppError::User(data) => data.meta(),
+            AppError::UserCredential(data) => data.meta(),
+            AppError::Unauthorized => ErrorMeta {
+                code: "000.000.0001",
+                message: "Invalid email or password".to_string(),
+                http_code: HttpErrorCode::Unauthorized,
+            },
             AppError::DatabaseError(error) => {
                 match error {
                     DbErr::Query(sea_orm::RuntimeErr::SqlxError(er)) => {
@@ -37,28 +46,31 @@ impl AppError {
                                 message: "Record already exists".to_string(),
                                 http_code: HttpErrorCode::Conflict,
                             },
-                            o => ErrorMeta {
-                                code: "100.000.000",
-                                message: o.unwrap().to_string(),
-                                http_code: HttpErrorCode::InternalServerError,
-                            },
+                            _ => {
+                                let message = er
+                                    .as_database_error()
+                                    .map(|e| e.message())
+                                    .unwrap_or("Database error");
+                                ErrorMeta {
+                                    code: "100.000.000",
+                                    message: message.to_string(),
+                                    http_code: HttpErrorCode::InternalServerError,
+                                }
+                            }
                         }
                     }
-                    k => ErrorMeta {
+                    other => ErrorMeta {
                         code: "100.000.500",
-                        message: k.to_string(),
+                        message: other.to_string(),
                         http_code: HttpErrorCode::InternalServerError,
                     },
-
-                }
-            },
-            AppError::InternalServerError(error_message)=>{
-                ErrorMeta {
-                    code: "100.000.000.00",
-                    message: error_message.clone(),
-                    http_code: HttpErrorCode::InternalServerError,
                 }
             }
+            AppError::InternalServerError(error_message) => ErrorMeta {
+                code: "100.000.000",
+                message: error_message.clone(),
+                http_code: HttpErrorCode::InternalServerError,
+            },
         }
     }
 }
@@ -67,11 +79,18 @@ pub enum HttpErrorCode {
     NotFound,
     Conflict,
     InternalServerError,
+    Unauthorized,
 }
 
 impl fmt::Display for AppError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.get_meta().message)
+    }
+}
+
+impl From<UserCredentialServiceError> for AppError {
+    fn from(err: UserCredentialServiceError) -> Self {
+        AppError::UserCredential(err)
     }
 }
 

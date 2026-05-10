@@ -6,6 +6,7 @@ use sea_orm::entity::prelude::*;
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub user_id: i32,
+    #[sea_orm(column_type = "Text")]
     pub password_hash: String,
     pub failed_attempts: i16,
     pub created_at: DateTimeUtc,

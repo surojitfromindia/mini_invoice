@@ -61,7 +61,8 @@ impl IntoResponse for AppError {
         let status = match meta.http_code {
             HttpErrorCode::Conflict => StatusCode::CONFLICT,
             HttpErrorCode::NotFound => StatusCode::NOT_FOUND,
-            _ => StatusCode::INTERNAL_SERVER_ERROR,
+            HttpErrorCode::Unauthorized => StatusCode::UNAUTHORIZED,
+            HttpErrorCode::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
         };
 
         (status, Json(body)).into_response()

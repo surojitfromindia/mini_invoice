@@ -1,5 +1,5 @@
-pub mod settings;
 pub mod database;
+pub mod settings;
 pub mod tracing;
 
 use config::{Config, Environment};

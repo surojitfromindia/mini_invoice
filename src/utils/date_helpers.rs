@@ -16,6 +16,11 @@ impl DateHelper {
         Self { dt }
     }
 
+    pub fn add_minutes(mut self, minutes: i64) -> Self {
+        self.dt = self.dt + Duration::minutes(minutes);
+        self
+    }
+
     /// Add days
     pub fn add_days(mut self, days: i64) -> Self {
         self.dt = self.dt + Duration::days(days);

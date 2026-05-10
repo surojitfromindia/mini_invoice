@@ -1,9 +1,10 @@
-use crate::entity::user_entity::{self as UserEntity, UserStatus};
+use crate::entity::user_entity::{self as User, UserStatus};
 
 use crate::errors::app_error::AppError;
 use crate::errors::user_service_errors::UserServiceError;
 use crate::service::service_context::ServiceContext;
 use crate::service::user_credential_service::UserCredentialService;
+use crate::service::PublicId;
 use crate::utils::date_helpers::DateHelper;
 use crate::utils::id_generator::IdGenerator;
 use sea_orm::{ActiveModelTrait, Set, TransactionTrait};
@@ -17,8 +18,6 @@ pub struct CreateUserAccount {
     pub password: String,
 }
 
-
-
 pub struct UserService;
 
 impl UserService {
@@ -26,28 +25,38 @@ impl UserService {
         ctx: &ServiceContext,
         payload: CreateUserAccount,
     ) -> Result<String, AppError> {
+        let settings = ctx.app_state.settings.clone();
         let email = payload.email.clone();
         // check is email exists.
         if UserService::check_email_is_registered(ctx, &email).await? {
             return Err(UserServiceError::EmailAlreadyExists.into());
         }
         let user = Self::prepare_user(payload.first_name, payload.last_name, payload.email);
-        ctx.app_state.primary_write_replica.transaction::<_,(), AppError>(|txn|{
-            Box::pin(async move {
-                // insert data with transaction
-                let user: UserEntity::Model = user.insert(txn).await?;
-                UserCredentialService::save_credential(txn, user.id, payload.password).await?;
-                Ok(())
+
+        ctx.app_state
+            .primary_write_replica
+            .transaction::<_, (), AppError>(|txn| {
+                Box::pin(async move {
+                    // insert data with transaction
+                    let user: User::Model = user.insert(txn).await?;
+                    UserCredentialService::save_credential(
+                        &settings,
+                        txn,
+                        user.id,
+                        &payload.password,
+                    )
+                    .await?;
+                    Ok(())
+                })
             })
-        }).await?;
+            .await?;
         Ok(email)
     }
-    
 
-    fn prepare_user(first_name: String, last_name:String, email: String)-> UserEntity::ActiveModel{
+    fn prepare_user(first_name: String, last_name: String, email: String) -> User::ActiveModel {
         let public_id = IdGenerator::get_user_id();
         let now = DateHelper::now().value();
-        UserEntity::ActiveModel {
+        User::ActiveModel {
             public_id: Set(public_id),
             first_name: Set(first_name),
             last_name: Set(last_name),
@@ -64,12 +73,22 @@ impl UserService {
         ctx: &ServiceContext,
         email: impl Into<String>,
     ) -> Result<bool, AppError> {
-        UserEntity::Entity::find_by_email(email.into())
+        User::Entity::find_by_email(email.into())
             .one(&ctx.app_state.primary_read_replica)
             .await
             .map(|x| x.is_some())
             .map_err(AppError::DatabaseError)
     }
-    
-    
+
+    pub async fn get_user_id_by_email(
+        ctx: &ServiceContext,
+        email: &String,
+    ) -> Result<(i32, PublicId), AppError> {
+        let user = User::Entity::find_by_email(email.clone())
+            .one(&ctx.app_state.primary_read_replica)
+            .await
+            .map_err(AppError::DatabaseError)?
+            .ok_or(UserServiceError::NotFound)?;
+        Ok((user.id, user.public_id))
+    }
 }

@@ -1,14 +1,14 @@
 use tokio::net::TcpListener;
 
+mod api;
 mod app;
+mod app_state;
 mod config;
 mod db;
-mod app_state;
 mod entity;
+mod errors;
 mod service;
 mod utils;
-mod api;
-mod errors;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

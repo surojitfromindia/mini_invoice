@@ -19,6 +19,7 @@ pub async fn create_app() -> anyhow::Result<Router> {
     let app_state = AppState {
         primary_read_replica,
         primary_write_replica,
+        settings,
     };
 
     info!("Server started");
@@ -30,6 +31,6 @@ pub async fn create_app() -> anyhow::Result<Router> {
     Ok(app)
 }
 
-async fn check_health()-> &'static str {
+async fn check_health() -> &'static str {
     "I am fine!"
 }
