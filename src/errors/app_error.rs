@@ -1,4 +1,5 @@
 use crate::errors::error_meta::ErrorMeta;
+use crate::errors::jwt_errors::JwtError;
 use crate::errors::user_credential_service_errors::UserCredentialServiceError;
 use crate::errors::user_service_errors::UserServiceError;
 use sea_orm::{DbErr, TransactionError};
@@ -8,6 +9,8 @@ use std::fmt;
 pub enum AppError {
     User(UserServiceError),
     UserCredential(UserCredentialServiceError),
+    InvalidCredentials,
+    JwtError(JwtError),
     Unauthorized,
     DatabaseError(DbErr),
     InternalServerError(String),
@@ -19,10 +22,16 @@ impl AppError {
             AppError::User(data) => data.meta(),
             AppError::UserCredential(data) => data.meta(),
             AppError::Unauthorized => ErrorMeta {
+                code: "000.000.0002",
+                message: "Not authorized".to_string(),
+                http_code: HttpErrorCode::Unauthorized,
+            },
+            AppError::InvalidCredentials => ErrorMeta {
                 code: "000.000.0001",
                 message: "Invalid email or password".to_string(),
                 http_code: HttpErrorCode::Unauthorized,
             },
+            AppError::JwtError(data) => data.meta(),
             AppError::DatabaseError(error) => {
                 match error {
                     DbErr::Query(sea_orm::RuntimeErr::SqlxError(er)) => {
@@ -97,6 +106,12 @@ impl From<UserCredentialServiceError> for AppError {
 impl From<UserServiceError> for AppError {
     fn from(err: UserServiceError) -> Self {
         AppError::User(err)
+    }
+}
+
+impl From<JwtError> for AppError {
+    fn from(err: JwtError) -> Self {
+        AppError::JwtError(err)
     }
 }
 

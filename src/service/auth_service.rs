@@ -38,7 +38,7 @@ impl AuthService {
                 None,
             )
             .await?;
-            return Err(AppError::Unauthorized);
+            return Err(AppError::InvalidCredentials);
         }
 
         let jwt = JwtHelpers::new(settings);
