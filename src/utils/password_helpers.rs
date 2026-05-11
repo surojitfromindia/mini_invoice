@@ -17,7 +17,7 @@ impl PasswordHelpers {
         let argon2 = Self::init_argon(&settings.login_secret_pepper)?;
         let password_hash = argon2
             .hash_password(plain_password.as_bytes())
-            .map_err(|e| AppError::InternalServerError(e.to_string()))?
+            .map_err(|e| AppError::InternalServer(e.to_string()))?
             .to_string();
 
         Ok(password_hash)
@@ -30,7 +30,7 @@ impl PasswordHelpers {
     ) -> Result<bool, AppError> {
         let argon2 = Self::init_argon(&settings.login_secret_pepper)?;
         let parsed_hash = PasswordHash::new(&password_hash)
-            .map_err(|x| AppError::InternalServerError(x.to_string()))?;
+            .map_err(|x| AppError::InternalServer(x.to_string()))?;
         let res = argon2
             .verify_password(plain_password.as_bytes(), &parsed_hash)
             .is_ok();
@@ -44,6 +44,6 @@ impl PasswordHelpers {
             Version::default(),
             Params::default(),
         )
-        .map_err(|x| AppError::InternalServerError(x.to_string()))
+        .map_err(|x| AppError::InternalServer(x.to_string()))
     }
 }

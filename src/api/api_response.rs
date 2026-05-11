@@ -1,70 +1,91 @@
-use crate::errors::app_error::{AppError, HttpErrorCode};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::Json;
 use serde::Serialize;
+use crate::errors::app_error::AppError;
 
 #[derive(Serialize)]
 pub struct ApiResponse<T> {
     pub success: bool,
     pub message: String,
+
     #[serde(skip_serializing_if = "Option::is_none")]
     pub data: Option<T>,
+
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub error: Option<ApiErrorBody>,
+    pub error: Option<ApiError>,
+
+
+    #[serde(skip)]
+    pub status: StatusCode,
 }
 
 #[derive(Serialize)]
-pub struct ApiErrorBody {
+pub struct ApiError {
     pub code: String,
+    pub message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub details: Option<String>,
+
 }
 
 impl<T> ApiResponse<T> {
-    pub fn from_success(data: T, message: impl Into<String>) -> Self {
+    pub fn success(data: T, message: impl Into<String>,    status: Option<StatusCode>,) -> Self {
         Self {
             success: true,
-            data: Some(data),
             message: message.into(),
+            data: Some(data),
             error: None,
+            status: status.unwrap_or(StatusCode::OK),
         }
     }
 
-    pub fn from_error(
+    pub fn error(
         code: impl Into<String>,
         message: impl Into<String>,
         details: Option<String>,
+        status: StatusCode
     ) -> Self {
+        let message = message.into();
         Self {
             success: false,
+            message: message.clone(),
             data: None,
-            message: message.into(),
-            error: Some(ApiErrorBody {
+            error: Some(ApiError {
                 code: code.into(),
+                message,
                 details,
             }),
+            status
         }
     }
 }
+
 impl<T: Serialize> IntoResponse for ApiResponse<T> {
     fn into_response(self) -> Response {
-        (StatusCode::OK, Json(self)).into_response()
+        (self.status, Json(self)).into_response()
     }
 }
 
 impl IntoResponse for AppError {
+
     fn into_response(self) -> Response {
-        let meta = self.get_meta();
 
-        let body = ApiResponse::<()>::from_error(meta.code, meta.message, None);
+        let meta = self.meta();
 
-        let status = match meta.http_code {
-            HttpErrorCode::Conflict => StatusCode::CONFLICT,
-            HttpErrorCode::NotFound => StatusCode::NOT_FOUND,
-            HttpErrorCode::Unauthorized => StatusCode::UNAUTHORIZED,
-            HttpErrorCode::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
-        };
+        let status = meta.http_code.as_status();
 
-        (status, Json(body)).into_response()
+        tracing::error!(error = ?self);
+
+        let body: ApiResponse<()> = ApiResponse::error(
+            meta.code,
+            meta.message,
+            None,
+            status,
+        );
+
+        (meta.http_code.as_status(), Json(body)).into_response()
+
     }
+
 }

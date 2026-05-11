@@ -1,137 +1,84 @@
-use crate::errors::error_meta::ErrorMeta;
+use crate::errors::error_meta::{ErrorMeta, ErrorMetadata};
 use crate::errors::jwt_errors::JwtError;
 use crate::errors::user_credential_service_errors::UserCredentialServiceError;
 use crate::errors::user_service_errors::UserServiceError;
-use sea_orm::{DbErr, TransactionError};
+use sea_orm::DbErr;
 use std::fmt;
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum AppError {
     User(UserServiceError),
     UserCredential(UserCredentialServiceError),
     InvalidCredentials,
-    JwtError(JwtError),
+    Jwt(JwtError),
     Unauthorized,
-    DatabaseError(DbErr),
-    InternalServerError(String),
+    Database(DbErr),
+    InternalServer(String),
 }
 
+
 impl AppError {
-    pub fn get_meta(&self) -> ErrorMeta {
+    pub fn meta(&self) -> ErrorMeta {
         match self {
             AppError::User(data) => data.meta(),
             AppError::UserCredential(data) => data.meta(),
+            AppError::Jwt(data) => data.meta(),
+            AppError::Database(data) =>data.meta(),
             AppError::Unauthorized => ErrorMeta {
                 code: "000.000.0002",
-                message: "Not authorized".to_string(),
+                message: "Not authorized".into(),
                 http_code: HttpErrorCode::Unauthorized,
             },
             AppError::InvalidCredentials => ErrorMeta {
                 code: "000.000.0001",
-                message: "Invalid email or password".to_string(),
+                message: "Invalid email or password".into(),
                 http_code: HttpErrorCode::Unauthorized,
             },
-            AppError::JwtError(data) => data.meta(),
-            AppError::DatabaseError(error) => {
-                match error {
-                    DbErr::Query(sea_orm::RuntimeErr::SqlxError(er)) => {
-                        let db_error = er.as_database_error().and_then(|e| e.code());
-                        match db_error.as_deref() {
-                            Some("23505") => ErrorMeta {
-                                // PostgreSQL unique violation
-                                code: "100.001.001",
-                                message: "Record already exists".to_string(),
-                                http_code: HttpErrorCode::Conflict,
-                            },
-                            Some("1062") => ErrorMeta {
-                                // MySQL duplicate entry
-                                code: "100.001.001",
-                                message: "Record already exists".to_string(),
-                                http_code: HttpErrorCode::Conflict,
-                            },
-                            Some("2067") => ErrorMeta {
-                                // SQLite unique violation
-                                code: "100.001.001",
-                                message: "Record already exists".to_string(),
-                                http_code: HttpErrorCode::Conflict,
-                            },
-                            _ => {
-                                let message = er
-                                    .as_database_error()
-                                    .map(|e| e.message())
-                                    .unwrap_or("Database error");
-                                ErrorMeta {
-                                    code: "100.000.000",
-                                    message: message.to_string(),
-                                    http_code: HttpErrorCode::InternalServerError,
-                                }
-                            }
-                        }
-                    }
-                    other => ErrorMeta {
-                        code: "100.000.500",
-                        message: other.to_string(),
-                        http_code: HttpErrorCode::InternalServerError,
-                    },
-                }
-            }
-            AppError::InternalServerError(error_message) => ErrorMeta {
+            AppError::InternalServer(error_message) => ErrorMeta {
                 code: "100.000.000",
-                message: error_message.clone(),
+                message: error_message.into(),
                 http_code: HttpErrorCode::InternalServerError,
             },
         }
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum HttpErrorCode {
     NotFound,
     Conflict,
     InternalServerError,
     Unauthorized,
 }
+impl HttpErrorCode {
+
+    pub fn as_status(&self) -> axum::http::StatusCode {
+
+        use axum::http::StatusCode;
+
+        match self {
+
+            Self::NotFound => StatusCode::NOT_FOUND,
+
+            Self::Conflict => StatusCode::CONFLICT,
+
+            Self::Unauthorized => StatusCode::UNAUTHORIZED,
+
+            Self::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
+
+        }
+
+    }
+
+}
+
+impl std::error::Error for AppError {}
 
 impl fmt::Display for AppError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.get_meta().message)
+        write!(f, "{}", self.meta().message)
     }
 }
 
-impl From<UserCredentialServiceError> for AppError {
-    fn from(err: UserCredentialServiceError) -> Self {
-        AppError::UserCredential(err)
-    }
-}
 
-impl From<UserServiceError> for AppError {
-    fn from(err: UserServiceError) -> Self {
-        AppError::User(err)
-    }
-}
-
-impl From<JwtError> for AppError {
-    fn from(err: JwtError) -> Self {
-        AppError::JwtError(err)
-    }
-}
-
-impl From<DbErr> for AppError {
-    fn from(err: DbErr) -> Self {
-        AppError::DatabaseError(err)
-    }
-}
-
-impl From<TransactionError<DbErr>> for AppError {
-    fn from(err: TransactionError<DbErr>) -> Self {
-        match err {
-            TransactionError::Connection(conn_err) => AppError::DatabaseError(conn_err),
-            TransactionError::Transaction(txn_err) => AppError::DatabaseError(txn_err),
-        }
-    }
-}
-
-impl From<TransactionError<AppError>> for AppError {
-    fn from(err: TransactionError<AppError>) -> Self {
-        err.into()
-    }
-}

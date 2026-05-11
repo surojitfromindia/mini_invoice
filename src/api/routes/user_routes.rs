@@ -7,6 +7,7 @@ use crate::service::user_service::{CreateUserAccount, UserService};
 use axum::extract::State;
 use axum::routing::post;
 use axum::{Json, Router};
+use axum::http::StatusCode;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
@@ -27,7 +28,7 @@ async fn create_account_handler(
 ) -> Result<ApiResponse<String>, AppError> {
     let service_context = ServiceContext { app_state: state };
     let email = UserService::create_user_account(&service_context, payload).await?;
-    Ok(ApiResponse::from_success(email, "User account created"))
+    Ok(ApiResponse::success(email, "User account created", Some(StatusCode::CREATED)))
 }
 
 async fn login_with_password(
@@ -37,5 +38,5 @@ async fn login_with_password(
     let service_context = ServiceContext { app_state: state };
     let result =
         AuthService::login_with_password(&service_context, payload.email, payload.password).await?;
-    Ok(ApiResponse::from_success(result, "User logged-in"))
+    Ok(ApiResponse::success(result, "User logged-in",Some(StatusCode::OK)))
 }

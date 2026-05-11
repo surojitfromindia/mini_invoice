@@ -33,7 +33,7 @@ impl UserCredentialService {
         user_credential
             .insert(db_transaction)
             .await
-            .map_err(AppError::DatabaseError)?;
+            .map_err(AppError::Database)?;
         Ok(true)
     }
 
@@ -45,7 +45,7 @@ impl UserCredentialService {
             .filter(UserCredentials::COLUMN.user_id.eq(user_id))
             .one(&ctx.app_state.primary_read_replica)
             .await
-            .map_err(AppError::DatabaseError)?
+            .map_err(AppError::Database)?
             .ok_or(UserCredentialServiceError::CredentialNotFound)?;
         Ok(data)
     }

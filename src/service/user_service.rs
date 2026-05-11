@@ -77,7 +77,7 @@ impl UserService {
             .one(&ctx.app_state.primary_read_replica)
             .await
             .map(|x| x.is_some())
-            .map_err(AppError::DatabaseError)
+            .map_err(AppError::Database)
     }
 
     pub async fn get_user_id_by_email(
@@ -87,7 +87,7 @@ impl UserService {
         let user = User::Entity::find_by_email(email.clone())
             .one(&ctx.app_state.primary_read_replica)
             .await
-            .map_err(AppError::DatabaseError)?
+            .map_err(AppError::Database)?
             .ok_or(UserServiceError::NotFound)?;
         Ok((user.id, user.public_id))
     }
