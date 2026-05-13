@@ -5,7 +5,6 @@ use crate::service::service_context::ServiceContext;
 use crate::service::user_credential_service::UserCredentialService;
 use crate::service::user_service::UserService;
 use crate::utils::jwt_helpers::JwtHelpers;
-use crate::utils::password_helpers::PasswordHelpers;
 use serde::{Deserialize, Serialize};
 
 #[allow(dead_code)]
@@ -23,26 +22,30 @@ impl AuthService {
         password: String,
     ) -> Result<LoginResponse, AppError> {
         let settings = &ctx.app_state.settings;
-
         let (user_id, user_public_id) = UserService::get_user_id_by_email(ctx, &email).await?;
-
         let credential = UserCredentialService::get_credential(ctx, user_id).await?;
-        let is_match =
-            PasswordHelpers::verify_login_password(settings, &password, &credential.password_hash)?;
-        if !is_match {
+
+
+        if let Err(_) = UserCredentialService::verify_login_password(settings, &password, &credential).await {
+            UserCredentialService::inc_failed_attempts(
+                &ctx.app_state.primary_write_replica,
+                user_id,
+            ).await?;
             LoginLogsService::save_log(
                 ctx,
                 Some(user_id),
                 email,
                 SignInLogEventType::LoginFailure,
                 None,
-            )
-            .await?;
+            ).await?;
             return Err(AppError::InvalidCredentials);
         }
 
+
         let jwt = JwtHelpers::new(settings);
         let access_token = jwt.generate_access_token(&user_public_id)?;
+        UserCredentialService::save_last_login_at(&ctx.app_state.primary_write_replica, user_id)
+            .await?;
         LoginLogsService::save_log(
             ctx,
             Some(user_id),

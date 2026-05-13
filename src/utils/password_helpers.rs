@@ -25,8 +25,8 @@ impl PasswordHelpers {
 
     pub fn verify_login_password(
         settings: &Settings,
-        plain_password: &String,
-        password_hash: &String,
+        plain_password: &str,
+        password_hash: &str,
     ) -> Result<bool, AppError> {
         let argon2 = Self::init_argon(&settings.login_secret_pepper)?;
         let parsed_hash = PasswordHash::new(&password_hash)

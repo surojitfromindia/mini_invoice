@@ -1,10 +1,8 @@
 use crate::config::settings::Settings;
-use crate::errors::app_error::AppError;
-
+use crate::errors::jwt_errors::JwtError;
 use crate::utils::date_helpers::DateHelper;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
-use crate::errors::jwt_errors::JwtError;
 
 pub struct JwtHelpers<'a> {
     settings: &'a Settings,
@@ -38,7 +36,7 @@ impl<'a> JwtHelpers<'a> {
             &claims,
             &EncodingKey::from_secret(self.settings.jwt_access_secret.as_bytes()),
         )
-        .map_err(|e| JwtError::CannotGenerateToken)
+        .map_err(|_e| JwtError::CannotGenerateToken)
     }
 
 

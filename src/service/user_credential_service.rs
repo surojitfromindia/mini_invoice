@@ -5,7 +5,8 @@ use crate::errors::user_credential_service_errors::UserCredentialServiceError;
 use crate::service::service_context::ServiceContext;
 use crate::utils::date_helpers::DateHelper;
 use crate::utils::password_helpers::PasswordHelpers;
-use sea_orm::{ActiveModelTrait, DatabaseTransaction, EntityTrait, QueryFilter, Set};
+use sea_orm::{ActiveModelTrait, ConnectionTrait, DatabaseTransaction, EntityTrait, ExprTrait, QueryFilter, Set};
+use sea_orm::prelude::Expr;
 
 pub struct UserCredentialService;
 
@@ -21,7 +22,7 @@ impl UserCredentialService {
         let now = DateHelper::now().value();
         let password_hash = PasswordHelpers::hash_login_password(settings, plain_password.into())?;
 
-        let user_credential = UserCredentials::ActiveModel {
+        let user_credential_active_model = UserCredentials::ActiveModel {
             user_id: Set(user_id),
             password_hash: Set(password_hash),
             failed_attempts: Set(0),
@@ -30,11 +31,39 @@ impl UserCredentialService {
             last_login_at: Set(None),
             ..Default::default()
         };
-        user_credential
+        user_credential_active_model
             .insert(db_transaction)
-            .await
-            .map_err(AppError::Database)?;
+            .await?;
         Ok(true)
+    }
+
+    pub async fn save_last_login_at(
+        db_transaction: &impl ConnectionTrait ,
+        user_id: i32,
+    ) -> Result<(), AppError> {
+        let now = DateHelper::now().value();
+        let user_credential_active_model = UserCredentials::ActiveModel {
+            user_id: Set(user_id),
+            last_login_at: Set(Some(now)),
+            ..Default::default()
+        };
+        user_credential_active_model
+            .insert(db_transaction)
+            .await?;
+        Ok(())
+    }
+    pub async fn inc_failed_attempts(
+        db_transaction: &impl ConnectionTrait ,
+        user_id: i32,
+    ) -> Result<(), AppError> {
+        UserCredentials::Entity::update_many()
+            .col_expr(
+                UserCredentials::COLUMN.failed_attempts,
+                Expr::col(UserCredentials::COLUMN.failed_attempts).add(1),
+            )
+            .filter(UserCredentials::COLUMN.user_id.eq(user_id))
+            .exec(db_transaction).await?;
+        Ok(())
     }
 
     pub async fn get_credential(
@@ -44,9 +73,26 @@ impl UserCredentialService {
         let data = UserCredentials::Entity::find()
             .filter(UserCredentials::COLUMN.user_id.eq(user_id))
             .one(&ctx.app_state.primary_read_replica)
-            .await
-            .map_err(AppError::Database)?
+            .await?
             .ok_or(UserCredentialServiceError::CredentialNotFound)?;
         Ok(data)
+    }
+
+
+    pub async fn verify_login_password(
+        settings: &Settings,
+        plain_password: &str,
+        credential: &UserCredentialsModel,
+    ) -> Result<(), AppError> {
+        let is_match = PasswordHelpers::verify_login_password(
+            settings,
+            plain_password,
+            &credential.password_hash
+        )?;
+
+        if !is_match {
+            return Err(AppError::InvalidCredentials);
+        }
+        Ok(())
     }
 }
