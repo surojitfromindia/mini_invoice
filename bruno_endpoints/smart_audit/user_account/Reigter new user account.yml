@@ -12,7 +12,7 @@ http:
       {
         "first_name": "surojit",
         "last_name": "paul",
-        "email": "surojit99924@gmail.com",
+        "email": "surojit99923@gmail.com",
         "password": "12345678"
       }
   auth: inherit

@@ -14,7 +14,6 @@ thiserror = {version = "2.0.18"}
 anyhow = {version = "1.0.102"}
 tracing = {version = "0.1.44"}
 chrono = {version = "0.4.44", features = ["serde"]}
-once_cell = {version = "1.21.4"}
 validator = {version = "0.20.0", features = ["derive"]}
 jsonwebtoken = {version = "10.3.0", features =["rust_crypto"]}
 config = "0.15.22"

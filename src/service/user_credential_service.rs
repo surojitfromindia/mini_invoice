@@ -5,8 +5,8 @@ use crate::errors::user_credential_service_errors::UserCredentialServiceError;
 use crate::service::service_context::ServiceContext;
 use crate::utils::date_helpers::DateHelper;
 use crate::utils::password_helpers::PasswordHelpers;
-use sea_orm::{ActiveModelTrait, ConnectionTrait, DatabaseTransaction, EntityTrait, ExprTrait, QueryFilter, Set};
 use sea_orm::prelude::Expr;
+use sea_orm::{ActiveModelTrait, ConnectionTrait, DatabaseTransaction, DbErr, EntityTrait, ExprTrait, QueryFilter, Set};
 
 pub struct UserCredentialService;
 
@@ -31,38 +31,36 @@ impl UserCredentialService {
             last_login_at: Set(None),
             ..Default::default()
         };
-        user_credential_active_model
-            .insert(db_transaction)
-            .await?;
+        user_credential_active_model.insert(db_transaction).await?;
         Ok(true)
     }
 
     pub async fn save_last_login_at(
-        db_transaction: &impl ConnectionTrait ,
+        db_transaction: &impl ConnectionTrait,
         user_id: i32,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), DbErr> {
         let now = DateHelper::now().value();
-        let user_credential_active_model = UserCredentials::ActiveModel {
-            user_id: Set(user_id),
-            last_login_at: Set(Some(now)),
-            ..Default::default()
-        };
-        user_credential_active_model
-            .insert(db_transaction)
+
+        UserCredentials::Entity::update_many()
+            .col_expr(UserCredentials::COLUMN.last_login_at, Expr::value(now))
+            .filter(UserCredentials::COLUMN.user_id.eq(user_id))
+            .exec(db_transaction)
             .await?;
+
         Ok(())
     }
     pub async fn inc_failed_attempts(
-        db_transaction: &impl ConnectionTrait ,
+        db_transaction: &impl ConnectionTrait,
         user_id: i32,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), DbErr> {
         UserCredentials::Entity::update_many()
             .col_expr(
                 UserCredentials::COLUMN.failed_attempts,
                 Expr::col(UserCredentials::COLUMN.failed_attempts).add(1),
             )
             .filter(UserCredentials::COLUMN.user_id.eq(user_id))
-            .exec(db_transaction).await?;
+            .exec(db_transaction)
+            .await?;
         Ok(())
     }
 
@@ -78,7 +76,6 @@ impl UserCredentialService {
         Ok(data)
     }
 
-
     pub async fn verify_login_password(
         settings: &Settings,
         plain_password: &str,
@@ -87,7 +84,7 @@ impl UserCredentialService {
         let is_match = PasswordHelpers::verify_login_password(
             settings,
             plain_password,
-            &credential.password_hash
+            &credential.password_hash,
         )?;
 
         if !is_match {
