@@ -3,7 +3,7 @@ use crate::entity::PublicId;
 
 #[derive(Debug, Default, Clone, PartialEq, EnumIter, DeriveActiveEnum)]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "user_status")]
-pub enum UserStatus {
+pub enum ClientAppStatus {
     #[sea_orm(string_value = "active")]
     #[default]
     Active,
@@ -13,18 +13,16 @@ pub enum UserStatus {
 
 #[sea_orm::model]
 #[derive(Debug, Clone, PartialEq, DeriveEntityModel)]
-#[sea_orm(table_name = "users")]
+#[sea_orm(table_name = "client_apps")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
     #[sea_orm(unique)]
     pub public_id: PublicId,
-    pub first_name: String,
-    pub last_name: String,
+    pub name: String,
     #[sea_orm(unique)]
-    pub email: String,
-    pub email_verified: bool,
-    pub status: UserStatus,
+    pub client_secret: String,
+    pub status: ClientAppStatus,
     pub created_at: DateTimeUtc,
     pub updated_at: DateTimeUtc,
 }

@@ -1,9 +1,10 @@
 use sea_orm::entity::prelude::*;
+use super::common_types::PublicId;
 
 #[derive(Debug, Clone, PartialEq, EnumIter, DeriveActiveEnum)]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "actor_type")]
 pub enum ActorType {
-    #[sea_orm(string_value = "app")]
+    #[sea_orm(string_value = "client_app")]
     App,
     #[sea_orm(string_value = "user")]
     User,
@@ -19,9 +20,9 @@ pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
     pub user_id: Option<i32>,
-    pub public_user_id: Option<String>,
-    pub app_id: Option<i32>,
-    pub public_app_id: Option<String>,
+    pub public_user_id: Option<PublicId>,
+    pub client_app_id: Option<i32>,
+    pub client_public_app_id: Option<PublicId>,
     pub actor_type: ActorType,
     pub created_at: DateTimeUtc,
     pub updated_at: DateTimeUtc,

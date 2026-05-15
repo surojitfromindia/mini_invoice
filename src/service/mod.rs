@@ -1,4 +1,3 @@
-pub type PublicId = String;
 
 pub mod auth_service;
 mod login_log_service;pub mod service_context;

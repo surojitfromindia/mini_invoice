@@ -4,11 +4,11 @@ use crate::errors::app_error::AppError;
 use crate::errors::user_service_errors::UserServiceError;
 use crate::service::service_context::ServiceContext;
 use crate::service::user_credential_service::UserCredentialService;
-use crate::service::PublicId;
 use crate::utils::date_helpers::DateHelper;
 use crate::utils::id_generator::IdGenerator;
 use sea_orm::{ActiveModelTrait, Set, TransactionTrait};
 use serde::Deserialize;
+use crate::entity::PublicId;
 
 #[derive(Deserialize)]
 pub struct CreateUserAccount {
