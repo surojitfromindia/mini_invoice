@@ -1,11 +1,11 @@
 use crate::entity::actor_entity::{self as Actor, ActorType};
 use crate::entity::{ClientAppPrimaryId, PublicId, UserPrimaryId};
-use crate::errors::app_error::AppError;
 use crate::utils::date_helpers::DateHelper;
 use sea_orm::{ActiveModelTrait, ConnectionTrait, DbErr, Set};
 
 pub struct ActorService {}
 
+#[allow(dead_code)]
 impl ActorService {
     pub async fn create_from_user(
         db_transaction: &impl ConnectionTrait,

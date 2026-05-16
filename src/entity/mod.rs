@@ -8,5 +8,6 @@ pub mod client_app;
 mod common_types;
 pub mod organization;
 
-pub use common_types::{PublicId, ActorPrimaryId, UserPrimaryId, ClientAppPrimaryId};
-
+pub use common_types::{
+    ActorPrimaryId, ClientAppPrimaryId, OrganizationPrimaryId, PublicId, UserPrimaryId,
+};

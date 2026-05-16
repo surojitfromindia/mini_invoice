@@ -13,7 +13,7 @@ pub struct Model {
     pub currency_iso_code: String,
     pub default_branch_id: Option<i32>,
     pub updated_by_actor_id: Option<ActorPrimaryId>,
-    pub created_by_actor_id: Option<ActorPrimaryId>,
+    pub created_by_actor_id: ActorPrimaryId,
     pub created_at: DateTimeUtc,
     pub updated_at: DateTimeUtc,
 }
