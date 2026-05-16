@@ -25,22 +25,24 @@ impl AuthService {
         let (user_id, user_public_id) = UserService::get_user_id_by_email(ctx, &email).await?;
         let credential = UserCredentialService::get_credential(ctx, user_id).await?;
 
-
-        if let Err(_) = UserCredentialService::verify_login_password(settings, &password, &credential).await {
+        if let Err(_) =
+            UserCredentialService::verify_login_password(settings, &password, &credential).await
+        {
             UserCredentialService::inc_failed_attempts(
                 &ctx.app_state.primary_write_replica,
                 user_id,
-            ).await?;
+            )
+            .await?;
             LoginLogsService::save_log(
                 ctx,
                 Some(user_id),
                 email,
                 SignInLogEventType::LoginFailure,
                 None,
-            ).await?;
+            )
+            .await?;
             return Err(AppError::InvalidCredentials);
         }
-
 
         let jwt = JwtHelpers::new(settings);
         let access_token = jwt.generate_access_token(&user_public_id)?;

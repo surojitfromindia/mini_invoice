@@ -6,7 +6,10 @@ use crate::service::service_context::ServiceContext;
 use crate::utils::date_helpers::DateHelper;
 use crate::utils::password_helpers::PasswordHelpers;
 use sea_orm::prelude::Expr;
-use sea_orm::{ActiveModelTrait, ConnectionTrait, DatabaseTransaction, DbErr, EntityTrait, ExprTrait, QueryFilter, Set};
+use sea_orm::{
+    ActiveModelTrait, ConnectionTrait, DatabaseTransaction, DbErr, EntityTrait, ExprTrait,
+    QueryFilter, Set,
+};
 
 pub struct UserCredentialService;
 

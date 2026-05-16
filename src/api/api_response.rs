@@ -1,8 +1,8 @@
+use crate::errors::app_error::AppError;
+use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::Json;
 use serde::Serialize;
-use crate::errors::app_error::AppError;
 
 #[derive(Serialize)]
 pub struct ApiResponse<T> {
@@ -15,7 +15,6 @@ pub struct ApiResponse<T> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<ApiError>,
 
-
     #[serde(skip)]
     pub status: StatusCode,
 }
@@ -26,11 +25,10 @@ pub struct ApiError {
     pub message: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub details: Option<String>,
-
 }
 
 impl<T> ApiResponse<T> {
-    pub fn success(data: T, message: impl Into<String>,    status: Option<StatusCode>,) -> Self {
+    pub fn success(data: T, message: impl Into<String>, status: Option<StatusCode>) -> Self {
         Self {
             success: true,
             message: message.into(),
@@ -44,7 +42,7 @@ impl<T> ApiResponse<T> {
         code: impl Into<String>,
         message: impl Into<String>,
         details: Option<String>,
-        status: StatusCode
+        status: StatusCode,
     ) -> Self {
         let message = message.into();
         Self {
@@ -56,7 +54,7 @@ impl<T> ApiResponse<T> {
                 message,
                 details,
             }),
-            status
+            status,
         }
     }
 }
@@ -68,24 +66,15 @@ impl<T: Serialize> IntoResponse for ApiResponse<T> {
 }
 
 impl IntoResponse for AppError {
-
     fn into_response(self) -> Response {
-
         let meta = self.meta();
 
         let status = meta.http_code.as_status();
 
         tracing::error!(error = ?self);
 
-        let body: ApiResponse<()> = ApiResponse::error(
-            meta.code,
-            meta.message,
-            None,
-            status,
-        );
+        let body: ApiResponse<()> = ApiResponse::error(meta.code, meta.message, None, status);
 
         (meta.http_code.as_status(), Json(body)).into_response()
-
     }
-
 }

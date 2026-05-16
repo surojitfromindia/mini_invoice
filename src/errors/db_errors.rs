@@ -1,6 +1,6 @@
-use sea_orm::{DbErr, TransactionError};
 use crate::errors::app_error::{AppError, HttpErrorCode};
 use crate::errors::error_meta::{ErrorMeta, ErrorMetadata};
+use sea_orm::{DbErr, TransactionError};
 impl From<DbErr> for AppError {
     fn from(err: DbErr) -> Self {
         AppError::Database(err)
@@ -16,19 +16,12 @@ impl From<TransactionError<DbErr>> for AppError {
     }
 }
 
-
-
-
 impl From<TransactionError<AppError>> for AppError {
     fn from(err: TransactionError<AppError>) -> Self {
         match err {
-            TransactionError::Connection(db_err) => {
-                AppError::Database(db_err)
-            }
+            TransactionError::Connection(db_err) => AppError::Database(db_err),
 
-            TransactionError::Transaction(app_err) => {
-                app_err
-            }
+            TransactionError::Transaction(app_err) => app_err,
         }
     }
 }

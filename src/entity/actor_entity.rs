@@ -1,5 +1,5 @@
-use sea_orm::entity::prelude::*;
 use super::common_types::PublicId;
+use sea_orm::entity::prelude::*;
 
 #[derive(Debug, Clone, PartialEq, EnumIter, DeriveActiveEnum)]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "actor_type")]
@@ -11,7 +11,6 @@ pub enum ActorType {
     #[sea_orm(string_value = "system")]
     System,
 }
-
 
 #[sea_orm::model]
 #[derive(Debug, Clone, PartialEq, DeriveEntityModel)]

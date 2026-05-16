@@ -8,11 +8,7 @@ pub struct ErrorMeta {
 }
 
 impl ErrorMeta {
-    pub fn new(
-        code: &'static str,
-        message: impl Into<String>,
-        http_code: HttpErrorCode,
-    ) -> Self {
+    pub fn new(code: &'static str, message: impl Into<String>, http_code: HttpErrorCode) -> Self {
         Self {
             code,
             message: message.into(),
@@ -24,4 +20,3 @@ impl ErrorMeta {
 pub trait ErrorMetadata {
     fn meta(&self) -> ErrorMeta;
 }
-

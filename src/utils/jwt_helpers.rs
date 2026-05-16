@@ -1,7 +1,7 @@
 use crate::config::settings::Settings;
 use crate::errors::jwt_errors::JwtError;
 use crate::utils::date_helpers::DateHelper;
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use serde::{Deserialize, Serialize};
 
 pub struct JwtHelpers<'a> {
@@ -14,7 +14,6 @@ pub struct AccessTokenClaims {
     pub exp: usize,
     pub iat: usize,
 }
-
 
 impl<'a> JwtHelpers<'a> {
     pub fn new(settings: &'a Settings) -> Self {
@@ -38,7 +37,6 @@ impl<'a> JwtHelpers<'a> {
         )
         .map_err(|_e| JwtError::CannotGenerateToken)
     }
-
 
     pub fn verify_access_token(&self, token: &str) -> Result<AccessTokenClaims, JwtError> {
         let data = decode::<AccessTokenClaims>(

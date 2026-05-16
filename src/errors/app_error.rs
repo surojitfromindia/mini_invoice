@@ -17,14 +17,13 @@ pub enum AppError {
     InternalServer(String),
 }
 
-
 impl AppError {
     pub fn meta(&self) -> ErrorMeta {
         match self {
             AppError::User(data) => data.meta(),
             AppError::UserCredential(data) => data.meta(),
             AppError::Jwt(data) => data.meta(),
-            AppError::Database(data) =>data.meta(),
+            AppError::Database(data) => data.meta(),
             AppError::Unauthorized => ErrorMeta {
                 code: "000.000.0002",
                 message: "Not authorized".into(),
@@ -52,13 +51,10 @@ pub enum HttpErrorCode {
     Unauthorized,
 }
 impl HttpErrorCode {
-
     pub fn as_status(&self) -> axum::http::StatusCode {
-
         use axum::http::StatusCode;
 
         match self {
-
             Self::NotFound => StatusCode::NOT_FOUND,
 
             Self::Conflict => StatusCode::CONFLICT,
@@ -66,11 +62,8 @@ impl HttpErrorCode {
             Self::Unauthorized => StatusCode::UNAUTHORIZED,
 
             Self::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
-
         }
-
     }
-
 }
 
 impl std::error::Error for AppError {}
@@ -80,5 +73,3 @@ impl fmt::Display for AppError {
         write!(f, "{}", self.meta().message)
     }
 }
-
-

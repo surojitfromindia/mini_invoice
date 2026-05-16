@@ -1,5 +1,6 @@
 use crate::entity::user_entity::{self as User, UserStatus};
 
+use crate::entity::PublicId;
 use crate::errors::app_error::AppError;
 use crate::errors::user_service_errors::UserServiceError;
 use crate::service::service_context::ServiceContext;
@@ -8,7 +9,6 @@ use crate::utils::date_helpers::DateHelper;
 use crate::utils::id_generator::IdGenerator;
 use sea_orm::{ActiveModelTrait, Set, TransactionTrait};
 use serde::Deserialize;
-use crate::entity::PublicId;
 
 #[derive(Deserialize)]
 pub struct CreateUserAccount {

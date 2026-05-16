@@ -3,8 +3,8 @@ use crate::errors::app_error::AppError;
 use crate::config::settings::Settings;
 
 use argon2::{
-    password_hash::{phc::PasswordHash, PasswordHasher, PasswordVerifier}, Algorithm, Argon2, Params,
-    Version,
+    Algorithm, Argon2, Params, Version,
+    password_hash::{PasswordHasher, PasswordVerifier, phc::PasswordHash},
 };
 
 pub struct PasswordHelpers {}
