@@ -22,7 +22,7 @@ pub struct Model {
     pub user_id: Option<i32>,
     pub public_user_id: Option<PublicId>,
     pub client_app_id: Option<i32>,
-    pub client_public_app_id: Option<PublicId>,
+    pub public_client_app_id: Option<PublicId>,
     pub actor_type: ActorType,
     pub created_at: DateTimeUtc,
     pub updated_at: DateTimeUtc,
