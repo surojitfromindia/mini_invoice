@@ -3,6 +3,7 @@ use crate::entity::user_entity::{self as User, UserStatus};
 use crate::entity::PublicId;
 use crate::errors::app_error::AppError;
 use crate::errors::user_service_errors::UserServiceError;
+use crate::service::actor_service::ActorService;
 use crate::service::service_context::ServiceContext;
 use crate::service::user_credential_service::UserCredentialService;
 use crate::utils::date_helpers::DateHelper;
@@ -46,6 +47,9 @@ impl UserService {
                         &payload.password,
                     )
                     .await?;
+
+                    ActorService::create_from_user(txn, user.id, user.public_id).await?;
+
                     Ok(())
                 })
             })

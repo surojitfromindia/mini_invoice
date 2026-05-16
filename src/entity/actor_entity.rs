@@ -5,7 +5,7 @@ use sea_orm::entity::prelude::*;
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "actor_type")]
 pub enum ActorType {
     #[sea_orm(string_value = "client_app")]
-    App,
+    ClientApp,
     #[sea_orm(string_value = "user")]
     User,
     #[sea_orm(string_value = "system")]
@@ -28,3 +28,7 @@ pub struct Model {
 }
 
 impl ActiveModelBehavior for ActiveModel {}
+
+
+pub type ActorModel = Model;
+pub type ActorEntity = Entity;
