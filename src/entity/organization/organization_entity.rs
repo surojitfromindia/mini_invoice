@@ -1,5 +1,5 @@
+use crate::entity::{ActorPrimaryId, PublicId};
 use sea_orm::entity::prelude::*;
-use crate::entity::{PublicId, ActorPrimaryId};
 
 #[sea_orm::model]
 #[derive(Debug, Clone, PartialEq, DeriveEntityModel)]
@@ -9,12 +9,15 @@ pub struct Model {
     pub id: i32,
     pub user_id: Option<i32>,
     #[sea_orm(unique)]
-    pub public_id: Option<PublicId>,
-    pub name_primary : String,
-    pub name_secondary : Option<String>,
+    pub public_id: PublicId,
+    pub name_primary: String,
+    pub name_secondary: Option<String>,
     pub created_by_actor_id: ActorPrimaryId,
     pub updated_by_actor_id: Option<ActorPrimaryId>,
     pub created_at: DateTimeUtc,
     pub updated_at: DateTimeUtc,
 }
 impl ActiveModelBehavior for ActiveModel {}
+
+pub type OrganizationModel = Model;
+pub type OrganizationEntity = Entity;

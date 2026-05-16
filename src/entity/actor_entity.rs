@@ -29,6 +29,5 @@ pub struct Model {
 
 impl ActiveModelBehavior for ActiveModel {}
 
-
 pub type ActorModel = Model;
 pub type ActorEntity = Entity;

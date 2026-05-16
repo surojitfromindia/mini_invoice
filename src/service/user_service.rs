@@ -40,6 +40,7 @@ impl UserService {
                 Box::pin(async move {
                     // insert data with transaction
                     let user: User::Model = user.insert(txn).await?;
+                    // save user credential
                     UserCredentialService::save_credential(
                         &settings,
                         txn,
@@ -47,9 +48,8 @@ impl UserService {
                         &payload.password,
                     )
                     .await?;
-
+                    // create an actor for this user.
                     ActorService::create_from_user(txn, user.id, user.public_id).await?;
-
                     Ok(())
                 })
             })
