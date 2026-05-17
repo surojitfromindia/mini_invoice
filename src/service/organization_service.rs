@@ -1,6 +1,7 @@
 use sea_orm::{ActiveModelTrait, DbErr, Set};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
+use crate::entity::PublicId;
 use crate::{
     entity::{
         ActorPrimaryId, OrganizationPrimaryId,
@@ -14,7 +15,7 @@ use crate::{
     utils::{date_helpers::DateHelper, id_generator::IdGenerator},
 };
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct CreateOrganization {
     pub name_primary: String,
     pub name_secondary: Option<String>,
@@ -36,13 +37,13 @@ impl From<&CreateOrganization> for CreateOrganizationMeta {
     }
 }
 
-struct OrganizationService;
+pub struct OrganizationService;
 
 impl OrganizationService {
     pub async fn create_organization(
         ctx: &ServiceContext,
         payload: CreateOrganization,
-    ) -> Result<(), AppError> {
+    ) -> Result<PublicId, AppError> {
         let actor_id = ctx.get_actor_id()?;
 
         let public_id = IdGenerator::get_organization_id();
@@ -71,7 +72,7 @@ impl OrganizationService {
         // create organization meta data.
         Self::create_organization_meta(ctx, organization_id, meta_payload).await?;
 
-        Ok(())
+        Ok(created_organization.public_id)
     }
 
     async fn create_organization_meta(

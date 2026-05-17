@@ -1,5 +1,4 @@
 use crate::api;
-use crate::api::middlewares::service_context_middleware;
 use crate::app_state::AppState;
 use crate::config;
 use crate::config::tracing::init_tracing;
@@ -28,10 +27,6 @@ pub async fn create_app() -> anyhow::Result<Router> {
         .route("/health", get(check_health))
         .merge(api::routes::create_routes())
         .layer(TraceLayer::new_for_http())
-        .layer(middleware::from_fn_with_state(
-            app_state.clone(),
-            service_context_middleware,
-        ))
         .with_state(app_state);
     Ok(app)
 }

@@ -6,6 +6,15 @@ info:
 http:
   method: POST
   url: "{{base_url_api_v1}}/organization/basic"
+  body:
+    type: json
+    data: |-
+      {
+        "name_primary" : "Organization 1",
+        "name_secondary" : "Organization 1",
+        "country_iso_code" : "IN",
+        "currency_iso_code" : "INR"
+      }
   auth: inherit
 
 settings:

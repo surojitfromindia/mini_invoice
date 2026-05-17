@@ -10,7 +10,7 @@ pub struct JwtHelpers<'a> {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AccessTokenClaims {
-    pub sub: String,
+    pub public_id: String,
     pub exp: usize,
     pub iat: usize,
 }
@@ -25,7 +25,7 @@ impl<'a> JwtHelpers<'a> {
         let exp = DateHelper::now().add_minutes(15).value();
 
         let claims = AccessTokenClaims {
-            sub: user_public_id.to_string(),
+            public_id: user_public_id.to_string(),
             iat: now.timestamp() as usize,
             exp: exp.timestamp() as usize,
         };
@@ -41,11 +41,10 @@ impl<'a> JwtHelpers<'a> {
     pub fn verify_access_token(&self, token: &str) -> Result<AccessTokenClaims, JwtError> {
         let data = decode::<AccessTokenClaims>(
             token,
-            &DecodingKey::from_secret(self.settings.jwt_refresh_secret.as_bytes()),
+            &DecodingKey::from_secret(self.settings.jwt_access_secret.as_bytes()),
             &Validation::default(),
         )
         .map_err(|_| JwtError::InvalidToken)?;
-
         Ok(data.claims)
     }
 }

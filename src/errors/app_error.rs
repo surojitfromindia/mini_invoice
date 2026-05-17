@@ -3,8 +3,8 @@ use crate::errors::jwt_errors::JwtError;
 use crate::errors::user_credential_service_errors::UserCredentialServiceError;
 use crate::errors::user_service_errors::UserServiceError;
 use sea_orm::DbErr;
-use std::fmt;
 use serde::de::IntoDeserializer;
+use std::fmt;
 
 #[derive(Debug)]
 #[allow(dead_code)]
@@ -41,11 +41,11 @@ impl AppError {
                 message: error_message.into(),
                 http_code: HttpErrorCode::InternalServerError,
             },
-            AppError::ActorIdNotFound => ErrorMeta{
-                code : "100.000.001",
-                message :"Actor id is missing inside context".into(),
+            AppError::ActorIdNotFound => ErrorMeta {
+                code: "100.000.001",
+                message: "Actor id is missing inside context".into(),
                 http_code: HttpErrorCode::InternalServerError,
-            }
+            },
         }
     }
 }

@@ -1,9 +1,12 @@
-use crate::entity::actor_entity::{self as Actor, ActorType};
-use crate::entity::{ClientAppPrimaryId, PublicId, UserPrimaryId};
+use crate::entity::actor_entity::{self as Actor, ActorEntity, ActorModel, ActorType};
+use crate::entity::{ActorPrimaryId, ClientAppPrimaryId, PublicId, UserPrimaryId};
+use crate::errors::app_error::AppError;
 use crate::utils::date_helpers::DateHelper;
-use sea_orm::{ActiveModelTrait, ConnectionTrait, DbErr, Set};
+use sea_orm::{ActiveModelTrait, ColumnTrait, ConnectionTrait, DbErr, EntityTrait, QueryFilter, Set};
+use crate::errors::user_service_errors::UserServiceError;
 
 pub struct ActorService {}
+
 
 #[allow(dead_code)]
 impl ActorService {
@@ -11,7 +14,7 @@ impl ActorService {
         db_transaction: &impl ConnectionTrait,
         user_id: UserPrimaryId,
         public_id: PublicId,
-    ) -> Result<(), DbErr> {
+    ) -> Result<(), AppError> {
         let now = DateHelper::now().value();
         let actor_active_model = Actor::ActiveModel {
             user_id: Set(Some(user_id)),
@@ -31,7 +34,7 @@ impl ActorService {
         db_transaction: &impl ConnectionTrait,
         client_app_id: ClientAppPrimaryId,
         public_id: PublicId,
-    ) -> Result<(), DbErr> {
+    ) -> Result<(), AppError> {
         let now = DateHelper::now().value();
         let actor_active_model = Actor::ActiveModel {
             user_id: Set(None),
@@ -45,5 +48,20 @@ impl ActorService {
         };
         actor_active_model.insert(db_transaction).await?;
         Ok(())
+    }
+
+    pub async fn get_user_actor(
+        db_transaction: &impl ConnectionTrait,
+        public_id: &PublicId,
+    ) -> Result<ActorModel, AppError> {
+        let actor= ActorEntity::find()
+            .filter(
+            ActorEntity::COLUMN.public_user_id.eq(public_id),
+        )
+            .one(db_transaction)
+            .await
+            .map_err(AppError::Database)?
+            .ok_or(AppError::ActorIdNotFound)?;
+        Ok(actor)
     }
 }

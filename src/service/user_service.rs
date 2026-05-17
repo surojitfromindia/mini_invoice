@@ -8,7 +8,7 @@ use crate::service::service_context::ServiceContext;
 use crate::service::user_credential_service::UserCredentialService;
 use crate::utils::date_helpers::DateHelper;
 use crate::utils::id_generator::IdGenerator;
-use sea_orm::{ActiveModelTrait, Set, TransactionTrait};
+use sea_orm::{ActiveModelTrait, ConnectionTrait, Set, TransactionTrait};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -95,4 +95,7 @@ impl UserService {
             .ok_or(UserServiceError::NotFound)?;
         Ok((user.id, user.public_id))
     }
+
+
+
 }

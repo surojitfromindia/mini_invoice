@@ -1,13 +1,12 @@
+use crate::api::PublicContext;
 use crate::api::api_response::ApiResponse;
 use crate::app_state::AppState;
 use crate::errors::app_error::AppError;
 use crate::service::auth_service::{AuthService, LoginResponse};
-use crate::service::service_context::ServiceContext;
 use crate::service::user_service::{CreateUserAccount, UserService};
-use axum::extract::State;
 use axum::http::StatusCode;
 use axum::routing::post;
-use axum::{Extension, Json, Router};
+use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
@@ -23,7 +22,7 @@ pub fn routes() -> Router<AppState> {
 }
 
 async fn create_account_handler(
-    Extension(ctx): Extension<ServiceContext>,
+    PublicContext(ctx): PublicContext,
     Json(payload): Json<CreateUserAccount>,
 ) -> Result<ApiResponse<String>, AppError> {
     let email = UserService::create_user_account(&ctx, payload).await?;
@@ -35,11 +34,10 @@ async fn create_account_handler(
 }
 
 async fn login_with_password(
-    Extension(ctx): Extension<ServiceContext>,
+    PublicContext(ctx): PublicContext,
     Json(payload): Json<LoginPayload>,
 ) -> Result<ApiResponse<LoginResponse>, AppError> {
-    let result =
-        AuthService::login_with_password(&ctx, payload.email, payload.password).await?;
+    let result = AuthService::login_with_password(&ctx, payload.email, payload.password).await?;
     Ok(ApiResponse::success(
         result,
         "User logged-in",

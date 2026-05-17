@@ -1,3 +1,5 @@
 pub mod api_response;
+pub mod context;
 pub mod routes;
-pub mod middlewares;
+
+pub use context::{AuthenticatedContext, PublicContext};
