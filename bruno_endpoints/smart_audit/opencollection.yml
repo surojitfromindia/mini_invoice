@@ -2,6 +2,29 @@ opencollection: 1.0.0
 
 info:
   name: smart_audit
+config:
+  proxy:
+    inherit: true
+    config:
+      protocol: http
+      hostname: ""
+      port: ""
+      auth:
+        username: ""
+        password: ""
+      bypassProxy: ""
+
+request:
+  auth:
+    type: bearer
+    token: ""
+  scripts:
+    - type: before-request
+      code: |-
+        req.setHeader(
+          "Authorization",
+          `Bearer ${bru.getEnvVar("access_token")}`
+        );
 bundled: false
 extensions:
   bruno:
