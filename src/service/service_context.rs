@@ -1,9 +1,6 @@
 use crate::app_state::AppState;
 use crate::entity::{ActorPrimaryId, ClientAppPrimaryId, OrganizationPrimaryId, UserPrimaryId};
 use crate::errors::app_error::AppError;
-use axum::extract::{Request, State};
-use axum::middleware::Next;
-use axum::response::Response;
 #[derive(Clone)]
 pub struct ServiceContext {
     pub app_state: AppState,
@@ -19,10 +16,19 @@ impl ServiceContext {
     }
 
     pub fn get_actor_id(&self) -> Result<ActorPrimaryId, AppError> {
-        if let Some(org_auth) = &self.auth {
-            return Ok(org_auth.actor_id);
+        if let Some(auth) = &self.auth {
+            return Ok(auth.actor_id);
         }
         Err(AppError::ActorIdNotFound)
+    }
+
+    pub fn get_user_id(&self) -> Result<UserPrimaryId, AppError> {
+        if let Some(auth) = &self.auth {
+            if let Some(user_id) = auth.user_id {
+                return Ok(user_id);
+            }
+        }
+        Err(AppError::UserIdNotFound)
     }
 
     pub fn set_auth(&mut self, auth: AuthContext) {

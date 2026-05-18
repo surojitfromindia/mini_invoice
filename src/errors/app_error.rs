@@ -3,8 +3,9 @@ use crate::errors::jwt_errors::JwtError;
 use crate::errors::user_credential_service_errors::UserCredentialServiceError;
 use crate::errors::user_service_errors::UserServiceError;
 use sea_orm::DbErr;
-use serde::de::IntoDeserializer;
 use std::fmt;
+use crate::errors::organization_service_errors::OrgServiceError;
+use crate::errors::staff_service_errors::StaffServiceError;
 
 #[derive(Debug)]
 #[allow(dead_code)]
@@ -13,10 +14,13 @@ pub enum AppError {
     UserCredential(UserCredentialServiceError),
     InvalidCredentials,
     Jwt(JwtError),
+    Org(OrgServiceError),
+    Staff(StaffServiceError),
     Unauthorized,
     Database(DbErr),
     InternalServer(String),
     ActorIdNotFound,
+    UserIdNotFound,
 }
 
 impl AppError {
@@ -25,6 +29,8 @@ impl AppError {
             AppError::User(data) => data.meta(),
             AppError::UserCredential(data) => data.meta(),
             AppError::Jwt(data) => data.meta(),
+            AppError::Org(data) => data.meta(),
+            AppError::Staff(data) => data.meta(),
             AppError::Database(data) => data.meta(),
             AppError::Unauthorized => ErrorMeta {
                 code: "000.000.0002",
@@ -42,8 +48,13 @@ impl AppError {
                 http_code: HttpErrorCode::InternalServerError,
             },
             AppError::ActorIdNotFound => ErrorMeta {
-                code: "100.000.001",
+                code: "001.000.001",
                 message: "Actor id is missing inside context".into(),
+                http_code: HttpErrorCode::InternalServerError,
+            },
+            AppError::UserIdNotFound => ErrorMeta {
+                code: "001.000.002",
+                message: "User id is missing inside context".into(),
                 http_code: HttpErrorCode::InternalServerError,
             },
         }

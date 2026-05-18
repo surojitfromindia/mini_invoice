@@ -1,13 +1,12 @@
-use sea_orm::{ActiveModelTrait, DbErr, Set};
+use sea_orm::{ActiveModelTrait, ConnectionTrait, Set, TransactionTrait};
 use serde::{Deserialize, Serialize};
 
-use crate::entity::PublicId;
+use crate::entity::{ActorPrimaryId, PublicId};
 use crate::{
     entity::{
-        ActorPrimaryId, OrganizationPrimaryId,
+        OrganizationPrimaryId,
         organization::{
-            organization_entity::{self as Organization},
-            organization_meta_entity::{self as OrganizationMeta},
+            organization_entity as Organization, organization_meta_entity as OrganizationMeta,
         },
     },
     errors::app_error::AppError,
@@ -45,6 +44,7 @@ impl OrganizationService {
         payload: CreateOrganization,
     ) -> Result<PublicId, AppError> {
         let actor_id = ctx.get_actor_id()?;
+        let user_id = ctx.get_user_id()?;
 
         let public_id = IdGenerator::get_organization_id();
         let now = DateHelper::now().value();
@@ -52,7 +52,7 @@ impl OrganizationService {
         let meta_payload = CreateOrganizationMeta::from(&payload);
 
         let organization_active_model = Organization::ActiveModel {
-            user_id: Set(None),
+            prime_user_id: Set(user_id),
             public_id: Set(public_id),
             name_primary: Set(payload.name_primary),
             name_secondary: Set(payload.name_secondary),
@@ -63,24 +63,25 @@ impl OrganizationService {
             ..Default::default()
         };
 
-        // create organization
-        let created_organization = organization_active_model
-            .insert(&ctx.app_state.primary_write_replica)
-            .await?;
-        let organization_id = created_organization.id;
+        let txn = ctx.app_state.primary_write_replica.begin().await?;
 
+        // create organization
+        let created_organization = organization_active_model.insert(&txn).await?;
         // create organization meta data.
-        Self::create_organization_meta(ctx, organization_id, meta_payload).await?;
+        Self::create_organization_meta(&txn, actor_id, created_organization.id, meta_payload)
+            .await?;
+
+        txn.commit().await?;
 
         Ok(created_organization.public_id)
     }
 
     async fn create_organization_meta(
-        ctx: &ServiceContext,
+        db_transaction: &impl ConnectionTrait,
+        actor_id: ActorPrimaryId,
         organization_id: OrganizationPrimaryId,
         payload: CreateOrganizationMeta,
     ) -> Result<(), AppError> {
-        let actor_id = ctx.get_actor_id()?;
         let now = DateHelper::now().value();
         let organization_meta_active_model = OrganizationMeta::ActiveModel {
             organization_id: Set(organization_id),
@@ -95,7 +96,7 @@ impl OrganizationService {
         };
 
         organization_meta_active_model
-            .insert(&ctx.app_state.primary_write_replica)
+            .insert(db_transaction)
             .await?;
 
         Ok(())

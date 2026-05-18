@@ -1,9 +1,8 @@
 use crate::entity::actor_entity::{self as Actor, ActorEntity, ActorModel, ActorType};
-use crate::entity::{ActorPrimaryId, ClientAppPrimaryId, PublicId, UserPrimaryId};
+use crate::entity::{ClientAppPrimaryId, PublicId, UserPrimaryId};
 use crate::errors::app_error::AppError;
 use crate::utils::date_helpers::DateHelper;
-use sea_orm::{ActiveModelTrait, ColumnTrait, ConnectionTrait, DbErr, EntityTrait, QueryFilter, Set};
-use crate::errors::user_service_errors::UserServiceError;
+use sea_orm::{ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter, Set};
 
 pub struct ActorService {}
 

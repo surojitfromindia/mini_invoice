@@ -4,7 +4,7 @@ use crate::config;
 use crate::config::tracing::init_tracing;
 use crate::db::connection::{init_read_replica_db, init_write_replica_db};
 use axum::routing::get;
-use axum::{Router, middleware};
+use axum::{Router};
 use tower_http::trace::TraceLayer;
 use tracing::info;
 
