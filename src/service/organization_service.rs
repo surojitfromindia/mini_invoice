@@ -13,6 +13,7 @@ use crate::{
     service::service_context::ServiceContext,
     utils::{date_helpers::DateHelper, id_generator::IdGenerator},
 };
+use crate::service::staff_service::StaffService;
 
 #[derive(Deserialize, Serialize)]
 pub struct CreateOrganization {
@@ -70,6 +71,12 @@ impl OrganizationService {
         // create organization meta data.
         Self::create_organization_meta(&txn, actor_id, created_organization.id, meta_payload)
             .await?;
+        // register this user as organization staff
+        StaffService::create_staff_from_user(
+            &txn,
+            &ctx,
+            created_organization.id
+        ).await?;
 
         txn.commit().await?;
 

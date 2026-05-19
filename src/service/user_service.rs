@@ -1,6 +1,6 @@
 use crate::entity::user_entity::{self as User, UserStatus};
 
-use crate::entity::PublicId;
+use crate::entity::{PublicId, UserPrimaryId};
 use crate::errors::app_error::AppError;
 use crate::errors::user_service_errors::UserServiceError;
 use crate::service::actor_service::ActorService;
@@ -8,7 +8,7 @@ use crate::service::service_context::ServiceContext;
 use crate::service::user_credential_service::UserCredentialService;
 use crate::utils::date_helpers::DateHelper;
 use crate::utils::id_generator::IdGenerator;
-use sea_orm::{ActiveModelTrait, Set, TransactionTrait};
+use sea_orm::{ActiveModelTrait, EntityTrait, Set, TransactionTrait};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -94,6 +94,18 @@ impl UserService {
             .map_err(AppError::Database)?
             .ok_or(UserServiceError::NotFound)?;
         Ok((user.id, user.public_id))
+    }
+
+    pub async fn get_user_by_id(
+        ctx: &ServiceContext,
+        id: UserPrimaryId,
+    ) -> Result<User::Model, AppError> {
+        let user = User::Entity::find_by_id(id)
+            .one(&ctx.app_state.primary_read_replica)
+            .await
+            .map_err(AppError::Database)?
+            .ok_or(UserServiceError::NotFound)?;
+        Ok(user)
     }
 
 
