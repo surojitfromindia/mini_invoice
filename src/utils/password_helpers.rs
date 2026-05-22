@@ -14,13 +14,7 @@ impl PasswordHelpers {
         settings: &Settings,
         plain_password: &str,
     ) -> Result<String, AppError> {
-        let argon2 = Self::init_argon(&settings.login_secret_pepper)?;
-        let password_hash = argon2
-            .hash_password(plain_password.as_bytes())
-            .map_err(|e| AppError::InternalServer(e.to_string()))?
-            .to_string();
-
-        Ok(password_hash)
+        Self::hash_secret(settings, plain_password)
     }
 
     pub fn verify_login_password(
@@ -28,11 +22,29 @@ impl PasswordHelpers {
         plain_password: &str,
         password_hash: &str,
     ) -> Result<bool, AppError> {
+        Self::verify_secret(settings, plain_password, password_hash)
+    }
+
+    pub fn hash_secret(settings: &Settings, plain_text: &str) -> Result<String, AppError> {
+        let argon2 = Self::init_argon(&settings.login_secret_pepper)?;
+        let password_hash = argon2
+            .hash_password(plain_text.as_bytes())
+            .map_err(|e| AppError::InternalServer(e.to_string()))?
+            .to_string();
+
+        Ok(password_hash)
+    }
+
+    pub fn verify_secret(
+        settings: &Settings,
+        plain_text: &str,
+        password_hash: &str,
+    ) -> Result<bool, AppError> {
         let argon2 = Self::init_argon(&settings.login_secret_pepper)?;
         let parsed_hash = PasswordHash::new(&password_hash)
             .map_err(|x| AppError::InternalServer(x.to_string()))?;
         let res = argon2
-            .verify_password(plain_password.as_bytes(), &parsed_hash)
+            .verify_password(plain_text.as_bytes(), &parsed_hash)
             .is_ok();
         Ok(res)
     }

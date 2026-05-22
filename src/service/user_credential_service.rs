@@ -28,10 +28,12 @@ impl UserCredentialService {
         let user_credential_active_model = UserCredentials::ActiveModel {
             user_id: Set(user_id),
             password_hash: Set(password_hash),
+            refresh_token_hash: Set(None),
             failed_attempts: Set(0),
             created_at: Set(now),
             password_changed_at: Set(None),
             last_login_at: Set(None),
+            refresh_token_expires_at: Set(None),
             ..Default::default()
         };
         user_credential_active_model.insert(db_transaction).await?;
@@ -107,5 +109,56 @@ impl UserCredentialService {
             return Err(AppError::InvalidCredentials);
         }
         Ok(())
+    }
+
+    pub async fn save_refresh_token(
+        settings: &Settings,
+        db_transaction: &impl ConnectionTrait,
+        user_id: i32,
+        refresh_token: &str,
+        refresh_token_expires_at: chrono::DateTime<chrono::Utc>,
+    ) -> Result<(), AppError> {
+        let refresh_token_hash = PasswordHelpers::hash_secret(settings, refresh_token)?;
+
+        UserCredentials::Entity::update_many()
+            .col_expr(
+                UserCredentials::COLUMN.refresh_token_hash,
+                Expr::value(refresh_token_hash),
+            )
+            .col_expr(
+                UserCredentials::COLUMN.refresh_token_expires_at,
+                Expr::value(refresh_token_expires_at),
+            )
+            .filter(UserCredentials::COLUMN.user_id.eq(user_id))
+            .exec(db_transaction)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn clear_refresh_token(
+        db_transaction: &impl ConnectionTrait,
+        user_id: i32,
+    ) -> Result<(), DbErr> {
+        UserCredentials::Entity::update_many()
+            .col_expr(UserCredentials::COLUMN.refresh_token_hash, Expr::value(None::<String>))
+            .col_expr(
+                UserCredentials::COLUMN.refresh_token_expires_at,
+                Expr::value(None::<chrono::DateTime<chrono::Utc>>),
+            )
+            .filter(UserCredentials::COLUMN.user_id.eq(user_id))
+            .exec(db_transaction)
+            .await?;
+        Ok(())
+    }
+
+    pub fn verify_refresh_token(
+        settings: &Settings,
+        plain_refresh_token: &str,
+        credential: &UserCredentialsModel,
+    ) -> Result<bool, AppError> {
+        let Some(refresh_token_hash) = &credential.refresh_token_hash else {
+            return Ok(false);
+        };
+        PasswordHelpers::verify_secret(settings, plain_refresh_token, refresh_token_hash)
     }
 }

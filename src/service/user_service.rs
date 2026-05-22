@@ -8,7 +8,7 @@ use crate::service::service_context::ServiceContext;
 use crate::service::user_credential_service::UserCredentialService;
 use crate::utils::date_helpers::DateHelper;
 use crate::utils::id_generator::IdGenerator;
-use sea_orm::{ActiveModelTrait, EntityTrait, Set, TransactionTrait};
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set, TransactionTrait};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -101,6 +101,19 @@ impl UserService {
         id: UserPrimaryId,
     ) -> Result<User::Model, AppError> {
         let user = User::Entity::find_by_id(id)
+            .one(&ctx.app_state.primary_read_replica)
+            .await
+            .map_err(AppError::Database)?
+            .ok_or(UserServiceError::NotFound)?;
+        Ok(user)
+    }
+
+    pub async fn get_user_by_public_id(
+        ctx: &ServiceContext,
+        public_id: &PublicId,
+    ) -> Result<User::Model, AppError> {
+        let user = User::Entity::find()
+            .filter(User::COLUMN.public_id.eq(public_id.clone()))
             .one(&ctx.app_state.primary_read_replica)
             .await
             .map_err(AppError::Database)?
