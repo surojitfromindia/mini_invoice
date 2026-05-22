@@ -1,10 +1,10 @@
 use crate::app_state::AppState;
 use crate::errors::app_error::AppError;
+use crate::service::actor_service::ActorService;
 use crate::service::service_context::{AuthContext, ServiceContext};
 use crate::utils::jwt_helpers::JwtHelpers;
 use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
-use crate::service::actor_service::ActorService;
 
 pub struct PublicContext(pub ServiceContext);
 
@@ -45,17 +45,15 @@ impl FromRequestParts<AppState> for AuthenticatedContext {
             // verify access token.
             let jwt = JwtHelpers::new(&state.settings);
             let claims = jwt.verify_access_token(token)?;
-            let public_id =claims.public_id;
+            let public_id = claims.public_id;
 
             // get user actor.
-            let user_actor = ActorService::get_user_actor(
-                &state.primary_read_replica,
-                &public_id,
-            ).await?;
+            let user_actor =
+                ActorService::get_user_actor(&state.primary_read_replica, &public_id).await?;
 
             // todo: later fetch user staff/ or app.
             // build auth context
-            let auth_context = AuthContext{
+            let auth_context = AuthContext {
                 actor_id: user_actor.id,
                 user_id: user_actor.user_id,
                 client_app_id: None,

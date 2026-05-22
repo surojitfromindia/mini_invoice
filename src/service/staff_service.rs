@@ -1,9 +1,8 @@
-use sea_orm::{ActiveModelTrait, ConnectionTrait, Set};
-use crate::entity::{OrganizationPrimaryId, UserPrimaryId};
+use crate::entity::OrganizationPrimaryId;
 use crate::errors::app_error::AppError;
 use crate::service::service_context::ServiceContext;
 use crate::service::user_service::UserService;
-
+use sea_orm::{ActiveModelTrait, ConnectionTrait, Set};
 
 use crate::entity::organization::staff_entity::{self as Staff, StaffStatus};
 use crate::utils::date_helpers::DateHelper;
@@ -11,26 +10,18 @@ use crate::utils::id_generator::IdGenerator;
 
 pub struct StaffService;
 
-
-
-
-
 impl StaffService {
-    pub async fn  create_staff_from_user(
+    pub async fn create_staff_from_user(
         db_transaction: &impl ConnectionTrait,
         ctx: &ServiceContext,
         organization_id: OrganizationPrimaryId,
-    )-> Result<(), AppError> {
+    ) -> Result<(), AppError> {
         let actor_id = ctx.get_actor_id()?;
         let user_id = ctx.get_user_id()?;
-        let user = UserService::get_user_by_id(
-            &ctx,
-            user_id,
-        ).await?;
+        let user = UserService::get_user_by_id(&ctx, user_id).await?;
 
         let now = DateHelper::now().value();
         let public_id = IdGenerator::generate_general_id();
-
 
         let staff_active_model = Staff::ActiveModel {
             user_id: Set(user_id),
@@ -45,10 +36,7 @@ impl StaffService {
             updated_at: Set(now),
             ..Default::default()
         };
-        staff_active_model
-            .insert(db_transaction)
-            .await?;
-
+        staff_active_model.insert(db_transaction).await?;
 
         Ok(())
     }

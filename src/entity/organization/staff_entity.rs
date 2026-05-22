@@ -1,7 +1,5 @@
-use sea_orm::entity::prelude::*;
 use crate::entity::{ActorPrimaryId, OrganizationPrimaryId, PublicId, UserPrimaryId};
-
-
+use sea_orm::entity::prelude::*;
 
 #[derive(Debug, Clone, PartialEq, EnumIter, DeriveActiveEnum)]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "staff_status")]
@@ -26,7 +24,7 @@ pub struct Model {
     pub public_id: PublicId,
     pub name_primary: String,
     pub name_secondary: Option<String>,
-    pub status : StaffStatus,
+    pub status: StaffStatus,
     pub created_by_actor_id: ActorPrimaryId,
     pub updated_by_actor_id: Option<ActorPrimaryId>,
     pub created_at: DateTimeUtc,

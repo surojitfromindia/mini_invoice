@@ -15,9 +15,11 @@ impl From<OrgServiceError> for AppError {
 impl ErrorMetadata for OrgServiceError {
     fn meta(&self) -> ErrorMeta {
         match self {
-            Self::NotFound => {
-                ErrorMeta::new("102.000.0002", "Organization not found", HttpErrorCode::NotFound)
-            }
+            Self::NotFound => ErrorMeta::new(
+                "102.000.0002",
+                "Organization not found",
+                HttpErrorCode::NotFound,
+            ),
         }
     }
 }

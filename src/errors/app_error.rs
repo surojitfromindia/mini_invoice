@@ -1,11 +1,11 @@
 use crate::errors::error_meta::{ErrorMeta, ErrorMetadata};
 use crate::errors::jwt_errors::JwtError;
+use crate::errors::organization_service_errors::OrgServiceError;
+use crate::errors::staff_service_errors::StaffServiceError;
 use crate::errors::user_credential_service_errors::UserCredentialServiceError;
 use crate::errors::user_service_errors::UserServiceError;
 use sea_orm::DbErr;
 use std::fmt;
-use crate::errors::organization_service_errors::OrgServiceError;
-use crate::errors::staff_service_errors::StaffServiceError;
 
 #[derive(Debug)]
 #[allow(dead_code)]

@@ -1,5 +1,5 @@
-use crate::api::api_response::ApiResponse;
 use crate::api::AuthenticatedContext;
+use crate::api::api_response::ApiResponse;
 use crate::app_state::AppState;
 use crate::errors::app_error::AppError;
 use crate::service::organization_service::{CreateOrganization, OrganizationService};

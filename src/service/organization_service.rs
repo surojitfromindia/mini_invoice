@@ -2,6 +2,7 @@ use sea_orm::{ActiveModelTrait, ConnectionTrait, Set, TransactionTrait};
 use serde::{Deserialize, Serialize};
 
 use crate::entity::{ActorPrimaryId, PublicId};
+use crate::service::staff_service::StaffService;
 use crate::{
     entity::{
         OrganizationPrimaryId,
@@ -13,7 +14,6 @@ use crate::{
     service::service_context::ServiceContext,
     utils::{date_helpers::DateHelper, id_generator::IdGenerator},
 };
-use crate::service::staff_service::StaffService;
 
 #[derive(Deserialize, Serialize)]
 pub struct CreateOrganization {
@@ -72,11 +72,7 @@ impl OrganizationService {
         Self::create_organization_meta(&txn, actor_id, created_organization.id, meta_payload)
             .await?;
         // register this user as organization staff
-        StaffService::create_staff_from_user(
-            &txn,
-            &ctx,
-            created_organization.id
-        ).await?;
+        StaffService::create_staff_from_user(&txn, &ctx, created_organization.id).await?;
 
         txn.commit().await?;
 
