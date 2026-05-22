@@ -27,12 +27,12 @@ impl UserService {
         payload: CreateUserAccount,
     ) -> Result<String, AppError> {
         let settings = ctx.app_state.settings.clone();
-        let email = payload.email.clone();
+        let email = payload.email.trim().to_lowercase();
         // check is email exists.
         if UserService::check_email_is_registered(ctx, &email).await? {
             return Err(UserServiceError::EmailAlreadyExists.into());
         }
-        let user = Self::prepare_user(payload.first_name, payload.last_name, payload.email);
+        let user = Self::prepare_user(payload.first_name, payload.last_name, email.clone());
 
         ctx.app_state
             .primary_write_replica
@@ -107,7 +107,4 @@ impl UserService {
             .ok_or(UserServiceError::NotFound)?;
         Ok(user)
     }
-
-
-
 }

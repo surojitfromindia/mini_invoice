@@ -6,7 +6,6 @@ use sea_orm::{ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, Query
 
 pub struct ActorService {}
 
-
 #[allow(dead_code)]
 impl ActorService {
     pub async fn create_from_user(
@@ -40,7 +39,7 @@ impl ActorService {
             public_user_id: Set(None),
             client_app_id: Set(Some(client_app_id)),
             public_client_app_id: Set(Some(public_id)),
-            actor_type: Set(ActorType::User),
+            actor_type: Set(ActorType::ClientApp),
             created_at: Set(now),
             updated_at: Set(now),
             ..Default::default()
@@ -53,10 +52,8 @@ impl ActorService {
         db_transaction: &impl ConnectionTrait,
         public_id: &PublicId,
     ) -> Result<ActorModel, AppError> {
-        let actor= ActorEntity::find()
-            .filter(
-            ActorEntity::COLUMN.public_user_id.eq(public_id),
-        )
+        let actor = ActorEntity::find()
+            .filter(ActorEntity::COLUMN.public_user_id.eq(public_id))
             .one(db_transaction)
             .await
             .map_err(AppError::Database)?

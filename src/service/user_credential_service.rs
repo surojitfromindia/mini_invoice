@@ -52,6 +52,19 @@ impl UserCredentialService {
 
         Ok(())
     }
+
+    pub async fn reset_failed_attempts(
+        db_transaction: &impl ConnectionTrait,
+        user_id: i32,
+    ) -> Result<(), DbErr> {
+        UserCredentials::Entity::update_many()
+            .col_expr(UserCredentials::COLUMN.failed_attempts, Expr::value(0))
+            .filter(UserCredentials::COLUMN.user_id.eq(user_id))
+            .exec(db_transaction)
+            .await?;
+        Ok(())
+    }
+
     pub async fn inc_failed_attempts(
         db_transaction: &impl ConnectionTrait,
         user_id: i32,
