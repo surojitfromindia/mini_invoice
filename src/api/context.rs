@@ -1,7 +1,9 @@
 use crate::app_state::AppState;
+use crate::auth::permission::build_permission_code_set;
 use crate::errors::app_error::AppError;
 use crate::errors::staff_service_errors::StaffServiceError;
 use crate::resolver::auth_resolver::AuthResolver;
+use crate::resolver::auth_resolver::ResolvedStaffAccess;
 use crate::service::service_context::{
     AuthContext, OrganizationStaffAccess, RequestContext, ServiceContext,
 };
@@ -85,12 +87,20 @@ impl FromRequestParts<AppState> for AuthenticatedContext {
                         AppError::Staff(StaffServiceError::NotFound) => AppError::Unauthorized,
                         other => other,
                     })?;
+                    let ResolvedStaffAccess {
+                        staff,
+                        role,
+                        permission_codes,
+                    } = membership;
+                    let permission_code_set = build_permission_code_set(&permission_codes);
+
                     Some(OrganizationStaffAccess {
-                        staff_id: membership.staff.id,
-                        organization_id: membership.staff.organization_id,
-                        role_id: membership.role.id,
-                        role_public_id: membership.role.public_id,
-                        permission_codes: membership.permission_codes,
+                        staff_id: staff.id,
+                        organization_id: staff.organization_id,
+                        role_id: role.id,
+                        role_public_id: role.public_id,
+                        permission_codes,
+                        permission_code_set,
                     })
                 }
                 _ => None,

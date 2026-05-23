@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::app_state::AppState;
 use crate::entity::{
     ActorPrimaryId, ClientAppPrimaryId, OrganizationPrimaryId, StaffPrimaryId, UserPrimaryId,
@@ -80,4 +82,5 @@ pub struct OrganizationStaffAccess {
     pub role_id: i32,
     pub role_public_id: String,
     pub permission_codes: Vec<String>,
+    pub permission_code_set: HashSet<String>,
 }

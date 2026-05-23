@@ -45,26 +45,6 @@ impl From<&CreateOrganization> for CreateOrganizationMeta {
 pub struct OrganizationService;
 
 impl OrganizationService {
-    pub async fn get_organization_by_public_id_from_db(
-        db_transaction: &impl ConnectionTrait,
-        public_id: &str,
-    ) -> Result<Organization::Model, AppError> {
-        let organization = Organization::Entity::find()
-            .filter(Organization::COLUMN.public_id.eq(public_id))
-            .one(db_transaction)
-            .await?
-            .ok_or(OrgServiceError::NotFound)?;
-        Ok(organization)
-    }
-
-    pub async fn get_organization_by_public_id(
-        ctx: &ServiceContext,
-        public_id: &str,
-    ) -> Result<Organization::Model, AppError> {
-        Self::get_organization_by_public_id_from_db(&ctx.app_state.primary_read_replica, public_id)
-            .await
-    }
-
     pub async fn create_organization(
         ctx: &ServiceContext,
         payload: CreateOrganization,

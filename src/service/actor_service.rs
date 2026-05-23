@@ -6,34 +6,7 @@ use sea_orm::{ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, Query
 
 pub struct ActorService {}
 
-#[allow(dead_code)]
 impl ActorService {
-    pub async fn get_user_actor_by_public_id(
-        db_transaction: &impl ConnectionTrait,
-        public_id: &PublicId,
-    ) -> Result<ActorModel, AppError> {
-        let actor = ActorEntity::find()
-            .filter(ActorEntity::COLUMN.public_user_id.eq(public_id))
-            .one(db_transaction)
-            .await
-            .map_err(AppError::Database)?
-            .ok_or(AppError::ActorIdNotFound)?;
-        Ok(actor)
-    }
-
-    pub async fn get_client_app_actor_by_public_id(
-        db_transaction: &impl ConnectionTrait,
-        public_id: &PublicId,
-    ) -> Result<ActorModel, AppError> {
-        let actor = ActorEntity::find()
-            .filter(ActorEntity::COLUMN.public_client_app_id.eq(public_id))
-            .one(db_transaction)
-            .await
-            .map_err(AppError::Database)?
-            .ok_or(AppError::ActorIdNotFound)?;
-        Ok(actor)
-    }
-
     pub async fn create_from_user(
         db_transaction: &impl ConnectionTrait,
         user_id: UserPrimaryId,
@@ -54,6 +27,7 @@ impl ActorService {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub async fn create_from_client_app(
         db_transaction: &impl ConnectionTrait,
         client_app_id: ClientAppPrimaryId,
@@ -72,12 +46,5 @@ impl ActorService {
         };
         actor_active_model.insert(db_transaction).await?;
         Ok(())
-    }
-
-    pub async fn get_user_actor(
-        db_transaction: &impl ConnectionTrait,
-        public_id: &PublicId,
-    ) -> Result<ActorModel, AppError> {
-        Self::get_user_actor_by_public_id(db_transaction, public_id).await
     }
 }

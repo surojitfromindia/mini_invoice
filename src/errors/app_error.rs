@@ -17,7 +17,7 @@ pub enum AppError {
     Org(OrgServiceError),
     Staff(StaffServiceError),
     Unauthorized,
-    Forbidden { permission: &'static str },
+    Forbidden { permission: String },
     Database(DbErr),
     InternalServer(String),
     ActorIdNotFound,

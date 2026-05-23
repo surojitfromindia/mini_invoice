@@ -1,9 +1,7 @@
 use crate::api::api_response::ApiResponse;
-use crate::api::{
-    AuthorizedContext, PublicContext, StaffInvitationResendPermission,
-    StaffInvitationRevokePermission, StaffInvitePermission,
-};
+use crate::api::{AuthorizedContext, PublicContext};
 use crate::app_state::AppState;
+use crate::auth::permission::Permission;
 use crate::errors::app_error::AppError;
 use crate::resolver::staff_payload_resolver::StaffPayloadResolver;
 use crate::service::staff_service::{
@@ -41,10 +39,10 @@ pub fn routes() -> Router<AppState> {
 }
 
 async fn create_staff_invitation_handler(
-    authorized_ctx: AuthorizedContext<StaffInvitePermission>,
+    authorized_ctx: AuthorizedContext,
     Json(payload): Json<CreateStaffInvitation>,
 ) -> Result<ApiResponse<StaffInvitationResponse>, AppError> {
-    let ctx = authorized_ctx.into_service_context();
+    let ctx = authorized_ctx.require_any([Permission::StaffInvite])?;
     let organization_id = ctx.get_organization_id()?;
     let resolved_payload = StaffPayloadResolver::resolve_create_staff_invitation(
         &ctx.app_state.primary_read_replica,
@@ -73,10 +71,10 @@ async fn accept_staff_invitation_handler(
 }
 
 async fn resend_staff_invitation_handler(
-    authorized_ctx: AuthorizedContext<StaffInvitationResendPermission>,
+    authorized_ctx: AuthorizedContext,
     Json(payload): Json<ResendStaffInvitation>,
 ) -> Result<ApiResponse<StaffInvitationResponse>, AppError> {
-    let ctx = authorized_ctx.into_service_context();
+    let ctx = authorized_ctx.require_permission(Permission::StaffInvitationResend)?;
     let organization_id = ctx.get_organization_id()?;
     let invitation_model = StaffPayloadResolver::resolve_resend_staff_invitation(
         &ctx.app_state.primary_read_replica,
@@ -93,10 +91,10 @@ async fn resend_staff_invitation_handler(
 }
 
 async fn revoke_staff_invitation_handler(
-    authorized_ctx: AuthorizedContext<StaffInvitationRevokePermission>,
+    authorized_ctx: AuthorizedContext,
     Json(payload): Json<RevokeStaffInvitation>,
 ) -> Result<ApiResponse<String>, AppError> {
-    let ctx = authorized_ctx.into_service_context();
+    let ctx = authorized_ctx.require_permission(Permission::StaffInvitationRevoke)?;
     let organization_id = ctx.get_organization_id()?;
     let invitation_model = StaffPayloadResolver::resolve_revoke_staff_invitation(
         &ctx.app_state.primary_read_replica,

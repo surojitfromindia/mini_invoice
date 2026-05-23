@@ -1,5 +1,4 @@
 use std::future::Future;
-use std::marker::PhantomData;
 
 use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
@@ -12,22 +11,35 @@ use crate::service::service_context::ServiceContext;
 
 use super::context::AuthenticatedContext;
 
-pub trait PermissionRequirement {
-    const PERMISSION: Permission;
-}
+// This extractor guarantees the request is authenticated.
+// Handlers can then declare the permission rule they need without creating
+// a new marker type for every single permission or permission combination.
+pub struct AuthorizedContext(ServiceContext);
 
-pub struct AuthorizedContext<P>(pub ServiceContext, PhantomData<P>);
+impl AuthorizedContext {
+    pub fn require_permission(self, permission: Permission) -> Result<ServiceContext, AppError> {
+        AuthorizationService::require_permission(&self.0, permission)?;
+        Ok(self.0)
+    }
 
-impl<P> AuthorizedContext<P> {
-    pub fn into_service_context(self) -> ServiceContext {
-        self.0
+    pub fn require_all<const N: usize>(
+        self,
+        permissions: [Permission; N],
+    ) -> Result<ServiceContext, AppError> {
+        AuthorizationService::require_all_permissions(&self.0, &permissions)?;
+        Ok(self.0)
+    }
+
+    pub fn require_any<const N: usize>(
+        self,
+        permissions: [Permission; N],
+    ) -> Result<ServiceContext, AppError> {
+        AuthorizationService::require_any_permission(&self.0, &permissions)?;
+        Ok(self.0)
     }
 }
 
-impl<P> FromRequestParts<AppState> for AuthorizedContext<P>
-where
-    P: PermissionRequirement + Send + Sync,
-{
+impl FromRequestParts<AppState> for AuthorizedContext {
     type Rejection = AppError;
 
     fn from_request_parts(
@@ -38,35 +50,7 @@ where
 
         async move {
             let AuthenticatedContext(ctx) = authenticated_context.await?;
-            // Handlers opt into a permission marker, and the extractor blocks the
-            // request before any business service code runs when access is missing.
-            AuthorizationService::require_permission(&ctx, P::PERMISSION).await?;
-            Ok(Self(ctx, PhantomData))
+            Ok(Self(ctx))
         }
     }
-}
-
-pub struct BranchCreatePermission;
-impl PermissionRequirement for BranchCreatePermission {
-    const PERMISSION: Permission = Permission::BranchCreate;
-}
-
-pub struct StaffInvitePermission;
-impl PermissionRequirement for StaffInvitePermission {
-    const PERMISSION: Permission = Permission::StaffInvite;
-}
-
-pub struct StaffInvitationResendPermission;
-impl PermissionRequirement for StaffInvitationResendPermission {
-    const PERMISSION: Permission = Permission::StaffInvitationResend;
-}
-
-pub struct StaffInvitationRevokePermission;
-impl PermissionRequirement for StaffInvitationRevokePermission {
-    const PERMISSION: Permission = Permission::StaffInvitationRevoke;
-}
-
-pub struct StaffRoleCreatePermission;
-impl PermissionRequirement for StaffRoleCreatePermission {
-    const PERMISSION: Permission = Permission::StaffRoleCreate;
 }

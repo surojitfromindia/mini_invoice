@@ -1,6 +1,7 @@
+use crate::api::AuthorizedContext;
 use crate::api::api_response::ApiResponse;
-use crate::api::{AuthorizedContext, BranchCreatePermission};
 use crate::app_state::AppState;
+use crate::auth::permission::Permission;
 use crate::errors::app_error::AppError;
 use crate::service::branch_service::{BranchService, CreateBranch};
 use axum::http::StatusCode;
@@ -12,10 +13,10 @@ pub fn routes() -> Router<AppState> {
 }
 
 async fn create_branch_handler(
-    authorized_ctx: AuthorizedContext<BranchCreatePermission>,
+    authorized_ctx: AuthorizedContext,
     Json(payload): Json<CreateBranch>,
 ) -> Result<ApiResponse<String>, AppError> {
-    let ctx = authorized_ctx.into_service_context();
+    let ctx = authorized_ctx.require_all([Permission::BranchCreate])?;
     let public_id = BranchService::create_branch(&ctx, payload).await?;
     Ok(ApiResponse::success(
         public_id,
