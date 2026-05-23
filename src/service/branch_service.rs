@@ -1,16 +1,14 @@
-use sea_orm::sea_query::Expr;
+use sea_orm::FromQueryResult;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter, QueryOrder,
     QuerySelect, Set, TransactionTrait,
 };
 
-use crate::api::dto::branch_dto::BranchListItemDto;
-use crate::api::dto::common_dto::PageListResult;
+use crate::db::listing::PageListResult;
 use crate::db::listing::{execute_page_query, validate_page_pagination};
 use crate::entity::organization::branch_entity::BranchModel;
 use crate::entity::organization::{
-    branch_entity as Branch, organization_entity as Organization,
-    organization_meta_entity as OrganizationMeta,
+    branch_entity as Branch, organization_meta_entity as OrganizationMeta,
 };
 use crate::entity::{ActorPrimaryId, BranchPrimaryId, OrganizationPrimaryId, PublicId};
 use crate::errors::app_error::AppError;
@@ -51,6 +49,14 @@ pub struct BranchListPageInput {
     pub include: Vec<BranchInclude>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, FromQueryResult)]
+pub struct BranchListItem {
+    pub public_id: String,
+    pub name_primary: String,
+    pub name_secondary: Option<String>,
+    pub is_primary: bool,
+}
+
 pub struct BranchService;
 
 impl BranchService {
@@ -80,23 +86,19 @@ impl BranchService {
     pub async fn list_branches_page(
         ctx: &ServiceContext,
         input: BranchListPageInput,
-    ) -> Result<PageListResult<BranchListItemDto>, AppError> {
+    ) -> Result<PageListResult<BranchListItem>, AppError> {
         let pagination = validate_page_pagination(input.page, input.per_page)?;
         let organization_id = ctx.get_organization_id()?;
-        let include_organization = input.include.contains(&BranchInclude::Organization);
         let sort_field = input.sort.unwrap_or(BranchSortField::CreatedAt);
         let sort_direction = input.direction.unwrap_or(SortDirection::Desc);
 
         let query =
             Self::build_branch_list_query(organization_id, input.name.as_deref(), input.is_primary);
         let query = Self::apply_page_sort(query, sort_field, sort_direction);
-        let query = Self::select_branch_list_columns(query).into_model::<BranchListItemDto>();
+        let query = Self::select_branch_list_columns(query).into_model::<BranchListItem>();
 
-        let mut result =
+        let result =
             execute_page_query(&ctx.app_state.primary_read_replica, query, pagination).await?;
-        if !include_organization {
-            Self::strip_optional_organization(&mut result.rows);
-        }
 
         Ok(result)
     }
@@ -206,9 +208,8 @@ impl BranchService {
         name: Option<&str>,
         is_primary: Option<bool>,
     ) -> sea_orm::Select<Branch::Entity> {
-        let mut query = Branch::Entity::find()
-            .left_join(Organization::Entity)
-            .filter(Branch::COLUMN.organization_id.eq(organization_id));
+        let mut query =
+            Branch::Entity::find().filter(Branch::COLUMN.organization_id.eq(organization_id));
 
         if let Some(name) = name.map(str::trim).filter(|value| !value.is_empty()) {
             query = query.filter(Branch::COLUMN.name_primary.contains(name));
@@ -252,15 +253,5 @@ impl BranchService {
             .column(Branch::Column::NamePrimary)
             .column(Branch::Column::NameSecondary)
             .column(Branch::Column::IsPrimary)
-            .expr_as(
-                Expr::col((Organization::Entity, Organization::Column::NamePrimary)),
-                "organization_name_primary",
-            )
-    }
-
-    fn strip_optional_organization(rows: &mut [BranchListItemDto]) {
-        for row in rows {
-            row.organization_name_primary = None;
-        }
     }
 }

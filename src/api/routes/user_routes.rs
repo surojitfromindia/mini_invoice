@@ -16,9 +16,9 @@ async fn create_account_handler(
     PublicContext(ctx): PublicContext,
     Json(payload): Json<CreateUserAccountRequestDto>,
 ) -> Result<ApiResponse<UserAccountCreatedResponseDto>, AppError> {
-    let email = UserService::create_user_account(&ctx, payload.into()).await?;
+    let email = UserService::create_user_account(&ctx, payload.into_service_input()).await?;
     Ok(ApiResponse::success(
-        UserAccountCreatedResponseDto { email },
+        UserAccountCreatedResponseDto::from_service_output(email),
         "User account created",
         Some(StatusCode::CREATED),
     ))

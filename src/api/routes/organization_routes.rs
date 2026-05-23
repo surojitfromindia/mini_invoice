@@ -17,9 +17,10 @@ async fn create_organization_handler(
     AuthenticatedContext(ctx): AuthenticatedContext,
     Json(payload): Json<CreateOrganizationRequestDto>,
 ) -> Result<ApiResponse<PublicIdResponse>, AppError> {
-    let public_id = OrganizationService::create_organization(&ctx, payload.into()).await?;
+    let public_id =
+        OrganizationService::create_organization(&ctx, payload.into_service_input()).await?;
     Ok(ApiResponse::success(
-        PublicIdResponse::new(public_id),
+        PublicIdResponse { public_id },
         "Organization created",
         Some(StatusCode::CREATED),
     ))

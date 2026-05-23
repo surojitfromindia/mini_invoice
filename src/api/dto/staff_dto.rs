@@ -6,8 +6,6 @@ use crate::service::staff_service::{
     RevokeStaffInvitationInput, StaffInvitationCreated,
 };
 
-use super::common_dto::ActionStatusResponse;
-
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct CreateStaffInvitationRequestDto {
     pub invitee_email: String,
@@ -17,10 +15,31 @@ pub struct CreateStaffInvitationRequestDto {
     pub branch_public_ids: Option<Vec<String>>,
 }
 
+impl CreateStaffInvitationRequestDto {
+    pub fn into_service_input(self) -> CreateStaffInvitationInput {
+        CreateStaffInvitationInput {
+            invitee_email: self.invitee_email,
+            invitee_first_name: self.invitee_first_name,
+            invitee_last_name: self.invitee_last_name,
+            role_public_id: self.role_public_id,
+            branch_public_ids: self.branch_public_ids,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct AcceptStaffInvitationRequestDto {
     pub invitation_token: String,
     pub password: String,
+}
+
+impl AcceptStaffInvitationRequestDto {
+    pub fn into_service_input(self) -> AcceptStaffInvitationInput {
+        AcceptStaffInvitationInput {
+            invitation_token: self.invitation_token,
+            password: self.password,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -28,69 +47,41 @@ pub struct ResendStaffInvitationRequestDto {
     pub invitation_id: String,
 }
 
+impl ResendStaffInvitationRequestDto {
+    pub fn into_service_input(self) -> ResendStaffInvitationInput {
+        ResendStaffInvitationInput {
+            invitation_id: self.invitation_id,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct RevokeStaffInvitationRequestDto {
     pub invitation_id: String,
 }
 
+impl RevokeStaffInvitationRequestDto {
+    pub fn into_service_input(self) -> RevokeStaffInvitationInput {
+        RevokeStaffInvitationInput {
+            invitation_id: self.invitation_id,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct StaffInvitationResponseDto {
     pub invitation_id: String,
     pub invitation_token: String,
     pub token_expires_at: DateTime<Utc>,
 }
 
-impl From<CreateStaffInvitationRequestDto> for CreateStaffInvitationInput {
-    fn from(value: CreateStaffInvitationRequestDto) -> Self {
+impl StaffInvitationResponseDto {
+    pub fn from_service_output(invitation: StaffInvitationCreated) -> Self {
         Self {
-            invitee_email: value.invitee_email,
-            invitee_first_name: value.invitee_first_name,
-            invitee_last_name: value.invitee_last_name,
-            role_public_id: value.role_public_id,
-            branch_public_ids: value.branch_public_ids,
+            invitation_id: invitation.invitation_id,
+            invitation_token: invitation.invitation_token,
+            token_expires_at: invitation.token_expires_at,
         }
     }
-}
-
-impl From<AcceptStaffInvitationRequestDto> for AcceptStaffInvitationInput {
-    fn from(value: AcceptStaffInvitationRequestDto) -> Self {
-        Self {
-            invitation_token: value.invitation_token,
-            password: value.password,
-        }
-    }
-}
-
-impl From<ResendStaffInvitationRequestDto> for ResendStaffInvitationInput {
-    fn from(value: ResendStaffInvitationRequestDto) -> Self {
-        Self {
-            invitation_id: value.invitation_id,
-        }
-    }
-}
-
-impl From<RevokeStaffInvitationRequestDto> for RevokeStaffInvitationInput {
-    fn from(value: RevokeStaffInvitationRequestDto) -> Self {
-        Self {
-            invitation_id: value.invitation_id,
-        }
-    }
-}
-
-impl From<StaffInvitationCreated> for StaffInvitationResponseDto {
-    fn from(value: StaffInvitationCreated) -> Self {
-        Self {
-            invitation_id: value.invitation_id,
-            invitation_token: value.invitation_token,
-            token_expires_at: value.token_expires_at,
-        }
-    }
-}
-
-pub fn accepted_response() -> ActionStatusResponse {
-    ActionStatusResponse::new("invitation_accepted")
-}
-
-pub fn revoked_response() -> ActionStatusResponse {
-    ActionStatusResponse::new("invitation_revoked")
 }

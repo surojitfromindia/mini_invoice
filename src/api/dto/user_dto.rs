@@ -10,18 +10,25 @@ pub struct CreateUserAccountRequestDto {
     pub password: String,
 }
 
+impl CreateUserAccountRequestDto {
+    pub fn into_service_input(self) -> CreateUserAccountInput {
+        CreateUserAccountInput {
+            first_name: self.first_name,
+            last_name: self.last_name,
+            email: self.email,
+            password: self.password,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UserAccountCreatedResponseDto {
     pub email: String,
 }
 
-impl From<CreateUserAccountRequestDto> for CreateUserAccountInput {
-    fn from(value: CreateUserAccountRequestDto) -> Self {
-        Self {
-            first_name: value.first_name,
-            last_name: value.last_name,
-            email: value.email,
-            password: value.password,
-        }
+impl UserAccountCreatedResponseDto {
+    pub fn from_service_output(email: String) -> Self {
+        Self { email }
     }
 }

@@ -3,7 +3,6 @@ use crate::api::dto::common_dto::ActionStatusResponse;
 use crate::api::dto::staff_dto::{
     AcceptStaffInvitationRequestDto, CreateStaffInvitationRequestDto,
     ResendStaffInvitationRequestDto, RevokeStaffInvitationRequestDto, StaffInvitationResponseDto,
-    accepted_response, revoked_response,
 };
 use crate::api::{AuthorizedContext, PublicContext};
 use crate::app_state::AppState;
@@ -32,12 +31,12 @@ async fn create_staff_invitation_handler(
     let resolved_payload = StaffPayloadResolver::resolve_create_staff_invitation(
         &ctx.app_state.primary_write_replica,
         organization_id,
-        payload.into(),
+        payload.into_service_input(),
     )
     .await?;
     let invitation = StaffService::create_staff_invitation(&ctx, resolved_payload).await?;
     Ok(ApiResponse::success(
-        invitation.into(),
+        StaffInvitationResponseDto::from_service_output(invitation),
         "Staff invitation created",
         Some(StatusCode::CREATED),
     ))
@@ -47,9 +46,11 @@ async fn accept_staff_invitation_handler(
     PublicContext(ctx): PublicContext,
     Json(payload): Json<AcceptStaffInvitationRequestDto>,
 ) -> Result<ApiResponse<ActionStatusResponse>, AppError> {
-    StaffService::accept_staff_invitation(&ctx, payload.into()).await?;
+    StaffService::accept_staff_invitation(&ctx, payload.into_service_input()).await?;
     Ok(ApiResponse::success(
-        accepted_response(),
+        ActionStatusResponse {
+            status: "invitation_accepted".to_string(),
+        },
         "Staff invitation accepted",
         Some(StatusCode::CREATED),
     ))
@@ -64,12 +65,12 @@ async fn resend_staff_invitation_handler(
     let invitation_model = StaffPayloadResolver::resolve_resend_staff_invitation(
         &ctx.app_state.primary_write_replica,
         organization_id,
-        payload.into(),
+        payload.into_service_input(),
     )
     .await?;
     let invitation = StaffService::resend_staff_invitation(&ctx, invitation_model).await?;
     Ok(ApiResponse::success(
-        invitation.into(),
+        StaffInvitationResponseDto::from_service_output(invitation),
         "Staff invitation resent",
         Some(StatusCode::OK),
     ))
@@ -84,12 +85,14 @@ async fn revoke_staff_invitation_handler(
     let invitation_model = StaffPayloadResolver::resolve_revoke_staff_invitation(
         &ctx.app_state.primary_write_replica,
         organization_id,
-        payload.into(),
+        payload.into_service_input(),
     )
     .await?;
     StaffService::revoke_staff_invitation(&ctx, invitation_model).await?;
     Ok(ApiResponse::success(
-        revoked_response(),
+        ActionStatusResponse {
+            status: "invitation_revoked".to_string(),
+        },
         "Staff invitation revoked",
         Some(StatusCode::OK),
     ))

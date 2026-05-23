@@ -19,9 +19,12 @@ async fn create_staff_role_handler(
     Json(payload): Json<CreateStaffRoleRequestDto>,
 ) -> Result<ApiResponse<PublicIdResponse>, AppError> {
     let ctx = authorized_ctx.require_permission(Permission::StaffRoleCreate)?;
-    let role_public_id = StaffRoleService::create_staff_role(&ctx, payload.into()).await?;
+    let role_public_id =
+        StaffRoleService::create_staff_role(&ctx, payload.into_service_input()).await?;
     Ok(ApiResponse::success(
-        PublicIdResponse::new(role_public_id),
+        PublicIdResponse {
+            public_id: role_public_id,
+        },
         "Staff role created",
         Some(StatusCode::CREATED),
     ))

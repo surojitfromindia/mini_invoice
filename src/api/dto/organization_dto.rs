@@ -10,13 +10,13 @@ pub struct CreateOrganizationRequestDto {
     pub currency_iso_code: String,
 }
 
-impl From<CreateOrganizationRequestDto> for CreateOrganizationInput {
-    fn from(value: CreateOrganizationRequestDto) -> Self {
-        Self {
-            name_primary: value.name_primary,
-            name_secondary: value.name_secondary,
-            country_iso_code: value.country_iso_code,
-            currency_iso_code: value.currency_iso_code,
+impl CreateOrganizationRequestDto {
+    pub fn into_service_input(self) -> CreateOrganizationInput {
+        CreateOrganizationInput {
+            name_primary: self.name_primary,
+            name_secondary: self.name_secondary,
+            country_iso_code: self.country_iso_code,
+            currency_iso_code: self.currency_iso_code,
         }
     }
 }

@@ -1,6 +1,6 @@
 use sea_orm::{ConnectionTrait, PaginatorTrait, SelectorTrait};
+use serde::Serialize;
 
-use crate::api::dto::common_dto::{PageListResult, PageMeta};
 use crate::errors::app_error::AppError;
 use crate::errors::error_codes;
 
@@ -12,6 +12,36 @@ const MAX_PAGE_SIZE: u64 = 100;
 pub struct ValidatedPagePagination {
     pub page: u64,
     pub per_page: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PageListResult<T> {
+    pub rows: Vec<T>,
+    pub meta: PageMeta,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PageMeta {
+    pub page: u64,
+    pub per_page: u64,
+    pub total_rows: u64,
+    pub total_pages: u64,
+    pub has_next: bool,
+    pub has_prev: bool,
+}
+
+impl<T> PageListResult<T> {
+    pub fn map_rows<U, F>(self, mut map_row: F) -> PageListResult<U>
+    where
+        F: FnMut(T) -> U,
+    {
+        PageListResult {
+            rows: self.rows.into_iter().map(&mut map_row).collect(),
+            meta: self.meta,
+        }
+    }
 }
 
 pub fn validate_page_pagination(
@@ -85,5 +115,37 @@ mod tests {
         let error = validate_page_pagination(1, 0).unwrap_err();
 
         assert_eq!(error.meta().code, error_codes::LISTING_INVALID_PAGINATION);
+    }
+
+    #[test]
+    fn page_list_result_serializes_camel_case_keys() {
+        let result = PageListResult {
+            rows: vec!["row"],
+            meta: PageMeta {
+                page: 1,
+                per_page: 20,
+                total_rows: 25,
+                total_pages: 2,
+                has_next: true,
+                has_prev: false,
+            },
+        };
+
+        let json = serde_json::to_value(result).unwrap();
+
+        assert_eq!(
+            json,
+            serde_json::json!({
+                "rows": ["row"],
+                "meta": {
+                    "page": 1,
+                    "perPage": 20,
+                    "totalRows": 25,
+                    "totalPages": 2,
+                    "hasNext": true,
+                    "hasPrev": false
+                }
+            })
+        );
     }
 }

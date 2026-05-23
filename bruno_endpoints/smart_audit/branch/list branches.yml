@@ -5,7 +5,20 @@ info:
 
 http:
   method: GET
-  url: "{{base_url_api_v1}}/branch?page=1&per_page=20&sort=created_at&direction=desc&include=organization"
+  url: "{{base_url_api_v1}}/branch?page=1&per_page=20&sort=created_at&direction=desc"
+  params:
+    - name: page
+      value: "1"
+      type: query
+    - name: per_page
+      value: "20"
+      type: query
+    - name: sort
+      value: created_at
+      type: query
+    - name: direction
+      value: desc
+      type: query
   auth: inherit
 
 settings:

@@ -1,11 +1,12 @@
 use sea_orm::FromQueryResult;
 use serde::{Deserialize, Serialize};
 
+use super::common_dto::{PagePaginationQuery, deserialize_optional_one_or_many};
+use crate::db::listing::PageListResult;
 use crate::service::branch_service::{
-    BranchInclude, BranchListPageInput, BranchSortField, CreateBranchInput, SortDirection,
+    BranchInclude, BranchListItem, BranchListPageInput, BranchSortField, CreateBranchInput,
+    SortDirection,
 };
-
-use super::common_dto::PagePaginationQuery;
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct CreateBranchRequestDto {
@@ -14,12 +15,12 @@ pub struct CreateBranchRequestDto {
     pub is_primary: Option<bool>,
 }
 
-impl From<CreateBranchRequestDto> for CreateBranchInput {
-    fn from(value: CreateBranchRequestDto) -> Self {
-        Self {
-            name_primary: value.name_primary,
-            name_secondary: value.name_secondary,
-            is_primary: value.is_primary,
+impl CreateBranchRequestDto {
+    pub fn into_service_input(self) -> CreateBranchInput {
+        CreateBranchInput {
+            name_primary: self.name_primary,
+            name_secondary: self.name_secondary,
+            is_primary: self.is_primary,
         }
     }
 }
@@ -45,13 +46,6 @@ pub enum BranchIncludeDto {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-#[serde(untagged)]
-enum OneOrMany<T> {
-    One(T),
-    Many(Vec<T>),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct BranchListPageQueryDto {
     #[serde(flatten)]
     pub pagination: PagePaginationQuery,
@@ -63,71 +57,57 @@ pub struct BranchListPageQueryDto {
     pub include: Option<Vec<BranchIncludeDto>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, FromQueryResult)]
-pub struct BranchListItemDto {
-    pub public_id: String,
-    pub name_primary: String,
-    pub name_secondary: Option<String>,
-    pub is_primary: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub organization_name_primary: Option<String>,
-}
-
-impl From<BranchListPageQueryDto> for BranchListPageInput {
-    fn from(value: BranchListPageQueryDto) -> Self {
-        Self {
-            page: value.pagination.page,
-            per_page: value.pagination.per_page,
-            name: value.name,
-            is_primary: value.is_primary,
-            sort: value.sort.map(Into::into),
-            direction: value.direction.map(Into::into),
-            include: value
+impl BranchListPageQueryDto {
+    pub fn into_service_input(self) -> BranchListPageInput {
+        BranchListPageInput {
+            page: self.pagination.page,
+            per_page: self.pagination.per_page,
+            name: self.name,
+            is_primary: self.is_primary,
+            sort: self.sort.map(|sort| match sort {
+                BranchSortFieldDto::CreatedAt => BranchSortField::CreatedAt,
+                BranchSortFieldDto::NamePrimary => BranchSortField::NamePrimary,
+            }),
+            direction: self.direction.map(|direction| match direction {
+                SortDirectionDto::Asc => SortDirection::Asc,
+                SortDirectionDto::Desc => SortDirection::Desc,
+            }),
+            include: self
                 .include
                 .unwrap_or_default()
                 .into_iter()
-                .map(Into::into)
+                .map(|include| match include {
+                    BranchIncludeDto::Organization => BranchInclude::Organization,
+                })
                 .collect(),
         }
     }
 }
 
-impl From<BranchSortFieldDto> for BranchSortField {
-    fn from(value: BranchSortFieldDto) -> Self {
-        match value {
-            BranchSortFieldDto::CreatedAt => Self::CreatedAt,
-            BranchSortFieldDto::NamePrimary => Self::NamePrimary,
-        }
-    }
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, FromQueryResult)]
+#[serde(rename_all = "camelCase")]
+pub struct BranchListItemResponseDto {
+    pub public_id: String,
+    pub name_primary: String,
+    pub name_secondary: Option<String>,
+    pub is_primary: bool,
 }
 
-impl From<SortDirectionDto> for SortDirection {
-    fn from(value: SortDirectionDto) -> Self {
-        match value {
-            SortDirectionDto::Asc => Self::Asc,
-            SortDirectionDto::Desc => Self::Desc,
+impl BranchListItemResponseDto {
+    pub fn from_service_output(item: BranchListItem) -> Self {
+        Self {
+            public_id: item.public_id,
+            name_primary: item.name_primary,
+            name_secondary: item.name_secondary,
+            is_primary: item.is_primary,
         }
     }
-}
 
-impl From<BranchIncludeDto> for BranchInclude {
-    fn from(value: BranchIncludeDto) -> Self {
-        match value {
-            BranchIncludeDto::Organization => Self::Organization,
-        }
+    pub fn page_from_service_output(
+        result: PageListResult<BranchListItem>,
+    ) -> PageListResult<Self> {
+        result.map_rows(Self::from_service_output)
     }
-}
-
-fn deserialize_optional_one_or_many<'de, D, T>(deserializer: D) -> Result<Option<Vec<T>>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-    T: Deserialize<'de>,
-{
-    let value = Option::<OneOrMany<T>>::deserialize(deserializer)?;
-    Ok(value.map(|value| match value {
-        OneOrMany::One(item) => vec![item],
-        OneOrMany::Many(items) => items,
-    }))
 }
 
 #[cfg(test)]
@@ -135,17 +115,25 @@ mod tests {
     use super::*;
 
     #[test]
-    fn create_branch_request_maps_to_service_input() {
-        let input: CreateBranchInput = CreateBranchRequestDto {
+    fn branch_list_item_response_serializes_camel_case_keys() {
+        let response = BranchListItemResponseDto {
+            public_id: "br_123".to_string(),
             name_primary: "HQ".to_string(),
             name_secondary: Some("Main".to_string()),
-            is_primary: Some(true),
-        }
-        .into();
+            is_primary: true,
+        };
 
-        assert_eq!(input.name_primary, "HQ");
-        assert_eq!(input.name_secondary.as_deref(), Some("Main"));
-        assert_eq!(input.is_primary, Some(true));
+        let json = serde_json::to_value(response).unwrap();
+
+        assert_eq!(
+            json,
+            serde_json::json!({
+                "publicId": "br_123",
+                "namePrimary": "HQ",
+                "nameSecondary": "Main",
+                "isPrimary": true
+            })
+        );
     }
 
     #[test]

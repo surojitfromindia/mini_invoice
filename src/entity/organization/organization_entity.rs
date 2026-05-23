@@ -16,8 +16,6 @@ pub struct Model {
     pub updated_by_actor_id: Option<ActorPrimaryId>,
     pub created_at: DateTimeUtc,
     pub updated_at: DateTimeUtc,
-    #[sea_orm(has_many)]
-    pub branches: HasMany<super::branch_entity::Entity>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

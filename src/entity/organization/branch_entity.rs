@@ -17,8 +17,6 @@ pub struct Model {
     pub updated_by_actor_id: Option<ActorPrimaryId>,
     pub created_at: DateTimeUtc,
     pub updated_at: DateTimeUtc,
-    #[sea_orm(belongs_to, from = "organization_id", to = "id")]
-    pub organization: HasOne<super::organization_entity::Entity>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

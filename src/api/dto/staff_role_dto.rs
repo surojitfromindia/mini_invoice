@@ -9,12 +9,12 @@ pub struct CreateStaffRoleRequestDto {
     pub permission_codes: Vec<String>,
 }
 
-impl From<CreateStaffRoleRequestDto> for CreateStaffRoleInput {
-    fn from(value: CreateStaffRoleRequestDto) -> Self {
-        Self {
-            name_primary: value.name_primary,
-            name_secondary: value.name_secondary,
-            permission_codes: value.permission_codes,
+impl CreateStaffRoleRequestDto {
+    pub fn into_service_input(self) -> CreateStaffRoleInput {
+        CreateStaffRoleInput {
+            name_primary: self.name_primary,
+            name_secondary: self.name_secondary,
+            permission_codes: self.permission_codes,
         }
     }
 }

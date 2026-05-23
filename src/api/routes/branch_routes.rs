@@ -1,9 +1,12 @@
 use crate::api::AuthorizedContext;
 use crate::api::api_response::ApiResponse;
-use crate::api::dto::branch_dto::{BranchListPageQueryDto, CreateBranchRequestDto};
-use crate::api::dto::common_dto::{PageListResult, PublicIdResponse};
+use crate::api::dto::branch_dto::{
+    BranchListItemResponseDto, BranchListPageQueryDto, CreateBranchRequestDto,
+};
+use crate::api::dto::common_dto::PublicIdResponse;
 use crate::app_state::AppState;
 use crate::auth::permission::Permission;
+use crate::db::listing::PageListResult;
 use crate::errors::app_error::AppError;
 use crate::service::branch_service::BranchService;
 use axum::extract::Query;
@@ -23,9 +26,9 @@ async fn create_branch_handler(
     Json(payload): Json<CreateBranchRequestDto>,
 ) -> Result<ApiResponse<PublicIdResponse>, AppError> {
     let ctx = authorized_ctx.require_all([Permission::BranchCreate])?;
-    let public_id = BranchService::create_branch(&ctx, payload.into()).await?;
+    let public_id = BranchService::create_branch(&ctx, payload.into_service_input()).await?;
     Ok(ApiResponse::success(
-        PublicIdResponse::new(public_id),
+        PublicIdResponse { public_id },
         "Branch created",
         Some(StatusCode::CREATED),
     ))
@@ -34,11 +37,11 @@ async fn create_branch_handler(
 async fn list_branches_page_handler(
     authorized_ctx: AuthorizedContext,
     Query(query): Query<BranchListPageQueryDto>,
-) -> Result<ApiResponse<PageListResult<crate::api::dto::branch_dto::BranchListItemDto>>, AppError> {
+) -> Result<ApiResponse<PageListResult<BranchListItemResponseDto>>, AppError> {
     let ctx = authorized_ctx.into_context();
-    let result = BranchService::list_branches_page(&ctx, query.into()).await?;
+    let result = BranchService::list_branches_page(&ctx, query.into_service_input()).await?;
     Ok(ApiResponse::success(
-        result,
+        BranchListItemResponseDto::page_from_service_output(result),
         "Branches fetched",
         Some(StatusCode::OK),
     ))

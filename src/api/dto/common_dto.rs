@@ -1,80 +1,86 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PublicIdResponse {
     pub public_id: String,
 }
 
-impl PublicIdResponse {
-    pub fn new(public_id: impl Into<String>) -> Self {
-        Self {
-            public_id: public_id.into(),
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ActionStatusResponse {
     pub status: String,
 }
 
-impl ActionStatusResponse {
-    pub fn new(status: impl Into<String>) -> Self {
-        Self {
-            status: status.into(),
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(try_from = "PagePaginationQueryRaw")]
+pub struct PagePaginationQuery {
+    pub page: u64,
+    pub per_page: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(untagged)]
+enum OneOrMany<T> {
+    One(T),
+    Many(Vec<T>),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+struct PagePaginationQueryRaw {
+    #[serde(default = "default_page_value")]
+    page: U64Value,
+    #[serde(default = "default_per_page_value")]
+    per_page: U64Value,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(untagged)]
+enum U64Value {
+    Number(u64),
+    String(String),
+}
+
+impl U64Value {
+    fn into_u64(self) -> Result<u64, String> {
+        match self {
+            U64Value::Number(value) => Ok(value),
+            U64Value::String(value) => value.parse::<u64>().map_err(|error| error.to_string()),
         }
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-pub struct PagePaginationQuery {
-    #[serde(default = "default_page")]
-    #[serde(deserialize_with = "deserialize_u64")]
-    pub page: u64,
-    #[serde(default = "default_per_page")]
-    #[serde(deserialize_with = "deserialize_u64")]
-    pub per_page: u64,
+impl TryFrom<PagePaginationQueryRaw> for PagePaginationQuery {
+    type Error = String;
+
+    fn try_from(value: PagePaginationQueryRaw) -> Result<Self, Self::Error> {
+        Ok(Self {
+            page: value.page.into_u64()?,
+            per_page: value.per_page.into_u64()?,
+        })
+    }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct PageListResult<T> {
-    pub rows: Vec<T>,
-    pub meta: PageMeta,
+const fn default_page_value() -> U64Value {
+    U64Value::Number(1)
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct PageMeta {
-    pub page: u64,
-    pub per_page: u64,
-    pub total_rows: u64,
-    pub total_pages: u64,
-    pub has_next: bool,
-    pub has_prev: bool,
+const fn default_per_page_value() -> U64Value {
+    U64Value::Number(20)
 }
 
-const fn default_page() -> u64 {
-    1
-}
-
-const fn default_per_page() -> u64 {
-    20
-}
-
-fn deserialize_u64<'de, D>(deserializer: D) -> Result<u64, D::Error>
+pub fn deserialize_optional_one_or_many<'de, D, T>(
+    deserializer: D,
+) -> Result<Option<Vec<T>>, D::Error>
 where
     D: serde::Deserializer<'de>,
+    T: Deserialize<'de>,
 {
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    enum U64Value {
-        Number(u64),
-        String(String),
-    }
-
-    match U64Value::deserialize(deserializer)? {
-        U64Value::Number(value) => Ok(value),
-        U64Value::String(value) => value.parse::<u64>().map_err(serde::de::Error::custom),
-    }
+    let value = Option::<OneOrMany<T>>::deserialize(deserializer)?;
+    Ok(value.map(|value| match value {
+        OneOrMany::One(item) => vec![item],
+        OneOrMany::Many(items) => items,
+    }))
 }
 
 #[cfg(test)]
@@ -103,10 +109,58 @@ mod tests {
 
     #[test]
     fn action_status_response_serializes_shape() {
-        let response = ActionStatusResponse::new("accepted");
+        let response = ActionStatusResponse {
+            status: "accepted".to_string(),
+        };
 
         let json = serde_json::to_value(response).unwrap();
 
         assert_eq!(json, serde_json::json!({ "status": "accepted" }));
+    }
+
+    #[test]
+    fn public_id_response_serializes_camel_case_keys() {
+        let response = PublicIdResponse {
+            public_id: "pub_123".to_string(),
+        };
+
+        let json = serde_json::to_value(response).unwrap();
+
+        assert_eq!(json, serde_json::json!({ "publicId": "pub_123" }));
+    }
+
+    #[test]
+    fn deserialize_optional_one_or_many_accepts_single_value() {
+        #[derive(Debug, Deserialize, PartialEq, Eq)]
+        struct Payload {
+            #[serde(deserialize_with = "deserialize_optional_one_or_many")]
+            items: Option<Vec<String>>,
+        }
+
+        let payload: Payload = serde_json::from_value(serde_json::json!({
+            "items": "one"
+        }))
+        .unwrap();
+
+        assert_eq!(payload.items, Some(vec!["one".to_string()]));
+    }
+
+    #[test]
+    fn deserialize_optional_one_or_many_accepts_array() {
+        #[derive(Debug, Deserialize, PartialEq, Eq)]
+        struct Payload {
+            #[serde(deserialize_with = "deserialize_optional_one_or_many")]
+            items: Option<Vec<String>>,
+        }
+
+        let payload: Payload = serde_json::from_value(serde_json::json!({
+            "items": ["one", "two"]
+        }))
+        .unwrap();
+
+        assert_eq!(
+            payload.items,
+            Some(vec!["one".to_string(), "two".to_string()])
+        );
     }
 }

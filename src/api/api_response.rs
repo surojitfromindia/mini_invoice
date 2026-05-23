@@ -5,6 +5,7 @@ use axum::response::{IntoResponse, Response};
 use serde::Serialize;
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ApiResponse<T> {
     pub success: bool,
     pub message: String,
@@ -20,6 +21,7 @@ pub struct ApiResponse<T> {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ApiError {
     pub code: String,
     pub message: String,
