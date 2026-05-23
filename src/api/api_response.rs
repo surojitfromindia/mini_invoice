@@ -68,13 +68,16 @@ impl<T: Serialize> IntoResponse for ApiResponse<T> {
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let meta = self.meta();
-
         let status = meta.http_code.as_status();
 
-        tracing::error!(error = ?self);
+        if status.is_server_error() {
+            tracing::error!(code = meta.code, status = %status, error = ?self, "request failed");
+        } else {
+            tracing::warn!(code = meta.code, status = %status, error = ?self, "request failed");
+        }
 
         let body: ApiResponse<()> = ApiResponse::error(meta.code, meta.message, None, status);
 
-        (meta.http_code.as_status(), Json(body)).into_response()
+        (status, Json(body)).into_response()
     }
 }

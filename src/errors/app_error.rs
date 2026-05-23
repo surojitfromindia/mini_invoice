@@ -1,4 +1,6 @@
+use crate::errors::error_codes;
 use crate::errors::error_meta::{ErrorMeta, ErrorMetadata};
+use crate::errors::internal_error_messages;
 use crate::errors::jwt_errors::JwtError;
 use crate::errors::organization_service_errors::OrgServiceError;
 use crate::errors::staff_service_errors::StaffServiceError;
@@ -35,37 +37,37 @@ impl AppError {
             AppError::Staff(data) => data.meta(),
             AppError::Database(data) => data.meta(),
             AppError::Unauthorized => ErrorMeta {
-                code: "000.000.0002",
+                code: error_codes::UNAUTHORIZED,
                 message: "Not authorized".into(),
                 http_code: HttpErrorCode::Unauthorized,
             },
             AppError::Forbidden { permission } => ErrorMeta {
-                code: "000.000.0003",
+                code: error_codes::FORBIDDEN,
                 message: format!("Missing permission: {permission}"),
                 http_code: HttpErrorCode::Forbidden,
             },
             AppError::InvalidCredentials => ErrorMeta {
-                code: "000.000.0001",
+                code: error_codes::INVALID_CREDENTIALS,
                 message: "Invalid email or password".into(),
                 http_code: HttpErrorCode::Unauthorized,
             },
-            AppError::InternalServer(error_message) => ErrorMeta {
-                code: "100.000.000",
-                message: error_message.into(),
+            AppError::InternalServer(_) => ErrorMeta {
+                code: error_codes::INTERNAL_SERVER_ERROR,
+                message: internal_error_messages::INTERNAL_SERVER_ERROR.into(),
                 http_code: HttpErrorCode::InternalServerError,
             },
             AppError::ActorIdNotFound => ErrorMeta {
-                code: "001.000.001",
+                code: error_codes::ACTOR_ID_NOT_FOUND,
                 message: "Actor id is missing inside context".into(),
                 http_code: HttpErrorCode::InternalServerError,
             },
             AppError::UserIdNotFound => ErrorMeta {
-                code: "001.000.002",
+                code: error_codes::USER_ID_NOT_FOUND,
                 message: "User id is missing inside context".into(),
                 http_code: HttpErrorCode::InternalServerError,
             },
             AppError::OrganizationIdNotFound => ErrorMeta {
-                code: "001.000.003",
+                code: error_codes::ORGANIZATION_ID_NOT_FOUND,
                 message: "Organization id is missing inside context".into(),
                 http_code: HttpErrorCode::InternalServerError,
             },
@@ -76,6 +78,7 @@ impl AppError {
 #[derive(Debug, Clone, Copy)]
 pub enum HttpErrorCode {
     NotFound,
+    BadRequest,
     Conflict,
     InternalServerError,
     Unauthorized,
@@ -87,6 +90,8 @@ impl HttpErrorCode {
 
         match self {
             Self::NotFound => StatusCode::NOT_FOUND,
+
+            Self::BadRequest => StatusCode::BAD_REQUEST,
 
             Self::Conflict => StatusCode::CONFLICT,
 

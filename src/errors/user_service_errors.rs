@@ -1,4 +1,5 @@
 use crate::errors::app_error::{AppError, HttpErrorCode};
+use crate::errors::error_codes;
 use crate::errors::error_meta::{ErrorMeta, ErrorMetadata};
 
 #[derive(Debug)]
@@ -17,13 +18,15 @@ impl ErrorMetadata for UserServiceError {
     fn meta(&self) -> ErrorMeta {
         match self {
             UserServiceError::EmailAlreadyExists => ErrorMeta::new(
-                "100.000.0001",
+                error_codes::USER_EMAIL_ALREADY_EXISTS,
                 "Email already exists",
                 HttpErrorCode::Conflict,
             ),
-            UserServiceError::NotFound => {
-                ErrorMeta::new("100.000.0002", "User not found", HttpErrorCode::NotFound)
-            }
+            UserServiceError::NotFound => ErrorMeta::new(
+                error_codes::USER_NOT_FOUND,
+                "User not found",
+                HttpErrorCode::NotFound,
+            ),
         }
     }
 }

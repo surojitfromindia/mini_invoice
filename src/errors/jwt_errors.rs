@@ -1,4 +1,5 @@
 use crate::errors::app_error::{AppError, HttpErrorCode};
+use crate::errors::error_codes;
 use crate::errors::error_meta::{ErrorMeta, ErrorMetadata};
 
 #[derive(Debug)]
@@ -17,17 +18,19 @@ impl From<JwtError> for AppError {
 impl ErrorMetadata for JwtError {
     fn meta(&self) -> ErrorMeta {
         match self {
-            JwtError::InvalidToken => {
-                ErrorMeta::new("001.000.0001", "Invalid token", HttpErrorCode::Unauthorized)
-            }
+            JwtError::InvalidToken => ErrorMeta::new(
+                error_codes::JWT_INVALID_TOKEN,
+                "Invalid token",
+                HttpErrorCode::Unauthorized,
+            ),
             JwtError::InvalidTokenType => ErrorMeta::new(
-                "001.000.0003",
+                error_codes::JWT_INVALID_TOKEN_TYPE,
                 "Invalid token type",
                 HttpErrorCode::Unauthorized,
             ),
 
             JwtError::CannotGenerateToken => ErrorMeta::new(
-                "001.000.0002",
+                error_codes::JWT_CANNOT_GENERATE_TOKEN,
                 "Cannot generate token",
                 HttpErrorCode::InternalServerError,
             ),

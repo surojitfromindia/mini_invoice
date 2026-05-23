@@ -1,5 +1,7 @@
 use crate::errors::app_error::{AppError, HttpErrorCode};
+use crate::errors::error_codes;
 use crate::errors::error_meta::{ErrorMeta, ErrorMetadata};
+use crate::errors::internal_error_messages;
 use sea_orm::{DbErr, TransactionError};
 impl From<DbErr> for AppError {
     fn from(err: DbErr) -> Self {
@@ -34,38 +36,32 @@ impl ErrorMetadata for DbErr {
                 match db_error.as_deref() {
                     Some("23505") => ErrorMeta {
                         // PostgreSQL unique violation
-                        code: "100.001.001",
+                        code: error_codes::DATABASE_DUPLICATE_RECORD,
                         message: "Record already exists".into(),
                         http_code: HttpErrorCode::Conflict,
                     },
                     Some("1062") => ErrorMeta {
                         // MySQL duplicate entry
-                        code: "100.001.001",
+                        code: error_codes::DATABASE_DUPLICATE_RECORD,
                         message: "Record already exists".into(),
                         http_code: HttpErrorCode::Conflict,
                     },
                     Some("2067") => ErrorMeta {
                         // SQLite unique violation
-                        code: "100.001.001",
+                        code: error_codes::DATABASE_DUPLICATE_RECORD,
                         message: "Record already exists".into(),
                         http_code: HttpErrorCode::Conflict,
                     },
-                    _ => {
-                        let message = er
-                            .as_database_error()
-                            .map(|e| e.message())
-                            .unwrap_or("Database error");
-                        ErrorMeta {
-                            code: "100.000.000",
-                            message: message.into(),
-                            http_code: HttpErrorCode::InternalServerError,
-                        }
-                    }
+                    _ => ErrorMeta {
+                        code: error_codes::DATABASE_OPERATION_FAILED,
+                        message: internal_error_messages::DATABASE_OPERATION_FAILED.into(),
+                        http_code: HttpErrorCode::InternalServerError,
+                    },
                 }
             }
-            other => ErrorMeta {
-                code: "100.000.500",
-                message: other.to_string(),
+            _ => ErrorMeta {
+                code: error_codes::DATABASE_OPERATION_FAILED,
+                message: internal_error_messages::DATABASE_OPERATION_FAILED.into(),
                 http_code: HttpErrorCode::InternalServerError,
             },
         }

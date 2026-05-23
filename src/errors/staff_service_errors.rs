@@ -1,4 +1,5 @@
 use crate::errors::app_error::{AppError, HttpErrorCode};
+use crate::errors::error_codes;
 use crate::errors::error_meta::{ErrorMeta, ErrorMetadata};
 
 #[derive(Debug)]
@@ -20,31 +21,33 @@ impl From<StaffServiceError> for AppError {
 impl ErrorMetadata for StaffServiceError {
     fn meta(&self) -> ErrorMeta {
         match self {
-            Self::NotFound => {
-                ErrorMeta::new("103.000.0002", "Staff not found", HttpErrorCode::NotFound)
-            }
+            Self::NotFound => ErrorMeta::new(
+                error_codes::STAFF_NOT_FOUND,
+                "Staff not found",
+                HttpErrorCode::NotFound,
+            ),
             Self::RoleNotFound => ErrorMeta::new(
-                "103.000.0006",
+                error_codes::STAFF_ROLE_NOT_FOUND,
                 "Staff role not found",
                 HttpErrorCode::NotFound,
             ),
             Self::InvalidPermission => ErrorMeta::new(
-                "103.000.0007",
+                error_codes::STAFF_INVALID_PERMISSION,
                 "Invalid staff permission",
-                HttpErrorCode::Conflict,
+                HttpErrorCode::BadRequest,
             ),
             Self::InvitationNotFound => ErrorMeta::new(
-                "103.000.0003",
+                error_codes::STAFF_INVITATION_NOT_FOUND,
                 "Staff invitation not found",
                 HttpErrorCode::NotFound,
             ),
             Self::InvitationExpired => ErrorMeta::new(
-                "103.000.0004",
+                error_codes::STAFF_INVITATION_EXPIRED,
                 "Staff invitation has expired",
                 HttpErrorCode::Conflict,
             ),
             Self::InvitationAlreadyUsed => ErrorMeta::new(
-                "103.000.0005",
+                error_codes::STAFF_INVITATION_ALREADY_USED,
                 "Staff invitation is not valid anymore",
                 HttpErrorCode::Conflict,
             ),
