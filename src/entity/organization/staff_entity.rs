@@ -32,3 +32,6 @@ pub struct Model {
     pub updated_at: DateTimeUtc,
 }
 impl ActiveModelBehavior for ActiveModel {}
+
+pub type StaffModel = Model;
+pub type StaffEntity = Entity;

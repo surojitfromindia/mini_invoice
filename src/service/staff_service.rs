@@ -1,19 +1,24 @@
 use crate::entity::organization::organization_entity as Organization;
-use crate::entity::{OrganizationPrimaryId, UserPrimaryId};
+use crate::entity::{
+    BranchPrimaryId, OrganizationPrimaryId, PublicId, StaffPrimaryId, UserPrimaryId,
+};
 use crate::errors::app_error::AppError;
 use crate::errors::staff_service_errors::StaffServiceError;
-use crate::service::organization_service::OrganizationService;
+use crate::resolver::staff_payload_resolver::ResolvedCreateStaffInvitation;
 use crate::service::service_context::ServiceContext;
 use crate::service::user_credential_service::UserCredentialService;
 use crate::service::user_service::UserService;
 use crate::utils::password_helpers::PasswordHelpers;
 use chrono::Utc;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter, Set, TransactionTrait,
+    ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseTransaction, EntityTrait, QueryFilter,
+    Set, TransactionTrait,
 };
 use serde::Deserialize;
 
+use crate::entity::organization::staff_branch_entity as StaffBranch;
 use crate::entity::organization::staff_entity::{self as Staff, StaffStatus};
+use crate::entity::organization::staff_invitation_branch_entity as StaffInvitationBranch;
 use crate::entity::organization::staff_invitation_entity::{
     self as StaffInvitation, StaffInvitationStatus,
 };
@@ -24,11 +29,11 @@ pub struct StaffService;
 
 #[derive(Deserialize)]
 pub struct CreateStaffInvitation {
-    pub organization_public_id: String,
     pub invitee_email: String,
     pub invitee_first_name: String,
     pub invitee_last_name: String,
     pub invited_role: Option<String>,
+    pub branch_public_ids: Option<Vec<String>>,
 }
 
 #[derive(Deserialize)]
@@ -53,7 +58,38 @@ pub struct StaffInvitationCreated {
     pub token_expires_at: chrono::DateTime<chrono::Utc>,
 }
 
+struct InvitationTokenBundle {
+    token_id: String,
+    token: String,
+    token_hash: String,
+    token_expires_at: chrono::DateTime<chrono::Utc>,
+}
+
 impl StaffService {
+    pub async fn get_staff_by_public_id(
+        db_transaction: &impl ConnectionTrait,
+        public_id: &PublicId,
+    ) -> Result<Staff::Model, AppError> {
+        let staff = Staff::Entity::find()
+            .filter(Staff::COLUMN.public_id.eq(public_id.clone()))
+            .one(db_transaction)
+            .await?
+            .ok_or(StaffServiceError::NotFound)?;
+        Ok(staff)
+    }
+
+    pub async fn get_staff_invitation_by_public_id(
+        db_transaction: &impl ConnectionTrait,
+        public_id: &PublicId,
+    ) -> Result<StaffInvitation::Model, AppError> {
+        let invitation = StaffInvitation::Entity::find()
+            .filter(StaffInvitation::COLUMN.public_id.eq(public_id.clone()))
+            .one(db_transaction)
+            .await?
+            .ok_or(StaffServiceError::InvitationNotFound)?;
+        Ok(invitation)
+    }
+
     pub async fn get_default_organization_for_user(
         ctx: &ServiceContext,
         user_id: UserPrimaryId,
@@ -105,38 +141,25 @@ impl StaffService {
 
     pub async fn create_staff_invitation(
         ctx: &ServiceContext,
-        payload: CreateStaffInvitation,
+        payload: ResolvedCreateStaffInvitation,
     ) -> Result<StaffInvitationCreated, AppError> {
         let actor_id = ctx.get_actor_id()?;
-        let organization = OrganizationService::get_organization_by_public_id(
-            ctx,
-            &payload.organization_public_id,
-        )
-        .await?;
-
+        let organization_id = ctx.get_organization_id()?;
         let now = DateHelper::now().value();
-        let token_expires_at = DateHelper::from(now).add_days(2).value();
         let invitation_public_id = IdGenerator::generate_general_id();
-        let invitation_token_id = IdGenerator::generate_general_id();
-        let invitation_token_secret = format!(
-            "{}.{}",
-            IdGenerator::generate_general_id(),
-            IdGenerator::generate_general_id()
-        );
-        let invitation_token = format!("{}.{}", invitation_token_id, invitation_token_secret);
-        let invitation_token_hash =
-            PasswordHelpers::hash_secret(&ctx.app_state.settings, &invitation_token_secret)?;
+        let token_bundle = Self::build_invitation_token_bundle(ctx)?;
+        let txn = ctx.app_state.primary_write_replica.begin().await?;
 
         let invitation = StaffInvitation::ActiveModel {
             public_id: Set(invitation_public_id.clone()),
-            organization_id: Set(organization.id),
+            organization_id: Set(organization_id),
             invitee_email: Set(payload.invitee_email.trim().to_lowercase()),
             invitee_first_name: Set(payload.invitee_first_name),
             invitee_last_name: Set(payload.invitee_last_name),
             invited_role: Set(payload.invited_role),
-            invitation_token_hash: Set(invitation_token_hash),
-            invitation_token_id: Set(invitation_token_id),
-            token_expires_at: Set(token_expires_at),
+            invitation_token_hash: Set(token_bundle.token_hash),
+            invitation_token_id: Set(token_bundle.token_id),
+            token_expires_at: Set(token_bundle.token_expires_at),
             accepted_at: Set(None),
             status: Set(StaffInvitationStatus::Pending),
             created_by_actor_id: Set(actor_id),
@@ -144,15 +167,18 @@ impl StaffService {
             created_at: Set(now),
             updated_at: Set(now),
             ..Default::default()
-        };
-        invitation
-            .insert(&ctx.app_state.primary_write_replica)
+        }
+        .insert(&txn)
+        .await?;
+
+        Self::attach_invitation_to_branches(&txn, actor_id, invitation.id, &payload.branch_ids)
             .await?;
+        txn.commit().await?;
 
         Ok(StaffInvitationCreated {
             invitation_id: invitation_public_id,
-            invitation_token,
-            token_expires_at,
+            invitation_token: token_bundle.token,
+            token_expires_at: token_bundle.token_expires_at,
         })
     }
 
@@ -161,47 +187,9 @@ impl StaffService {
         payload: AcceptStaffInvitation,
     ) -> Result<(), AppError> {
         let now = DateHelper::now().value();
-        let invitation_token = payload.invitation_token.trim();
-        let (invitation_token_id, invitation_token_secret) = invitation_token
-            .split_once('.')
-            .ok_or(StaffServiceError::InvitationNotFound)?;
-        let invitation = StaffInvitation::Entity::find()
-            .filter(
-                StaffInvitation::COLUMN
-                    .invitation_token_id
-                    .eq(invitation_token_id),
-            )
-            .one(&ctx.app_state.primary_read_replica)
-            .await?
-            .ok_or(StaffServiceError::InvitationNotFound)?;
-
-        let is_valid_token = PasswordHelpers::verify_secret(
-            &ctx.app_state.settings,
-            invitation_token_secret,
-            &invitation.invitation_token_hash,
-        )?;
-        if !is_valid_token {
-            return Err(StaffServiceError::InvitationNotFound.into());
-        }
-
-        if invitation.status != StaffInvitationStatus::Pending {
-            return Err(StaffServiceError::InvitationAlreadyUsed.into());
-        }
-        if invitation.token_expires_at < Utc::now() {
-            StaffInvitation::Entity::update_many()
-                .col_expr(
-                    StaffInvitation::COLUMN.status,
-                    sea_orm::sea_query::Expr::value(StaffInvitationStatus::Expired),
-                )
-                .col_expr(
-                    StaffInvitation::COLUMN.updated_at,
-                    sea_orm::sea_query::Expr::value(now),
-                )
-                .filter(StaffInvitation::COLUMN.id.eq(invitation.id))
-                .exec(&ctx.app_state.primary_write_replica)
-                .await?;
-            return Err(StaffServiceError::InvitationExpired.into());
-        }
+        let invitation =
+            Self::get_valid_invitation_from_token(ctx, payload.invitation_token.trim()).await?;
+        Self::expire_invitation_if_needed(ctx, &invitation, now).await?;
 
         let settings = ctx.app_state.settings.clone();
         ctx.app_state
@@ -210,95 +198,29 @@ impl StaffService {
                 let invitation = invitation.clone();
                 let password = payload.password.clone();
                 Box::pin(async move {
-                    let user = UserService::get_or_create_user_without_password(
+                    let user = Self::get_or_create_invited_user(txn, &invitation).await?;
+                    Self::ensure_user_credential(txn, &settings, user.id, &password).await?;
+                    let invitation_branch_ids =
+                        Self::get_invitation_branch_ids(txn, invitation.id).await?;
+                    let staff =
+                        Self::find_or_create_staff_from_invitation(txn, &invitation, user.id, now)
+                            .await?;
+                    Self::attach_staff_to_branches(
                         txn,
-                        invitation.invitee_first_name.clone(),
-                        invitation.invitee_last_name.clone(),
-                        invitation.invitee_email.clone(),
+                        invitation.created_by_actor_id,
+                        staff.id,
+                        &invitation_branch_ids,
                     )
                     .await?;
-
-                    let has_credential =
-                        UserCredentialService::credential_exists(txn, user.id).await?;
-                    if !has_credential {
-                        UserCredentialService::save_credential(&settings, txn, user.id, &password)
-                            .await?;
-                    }
-
-                    let already_staff = Staff::Entity::find()
-                        .filter(Staff::COLUMN.user_id.eq(user.id))
-                        .filter(Staff::COLUMN.organization_id.eq(invitation.organization_id))
-                        .one(txn)
-                        .await?
-                        .is_some();
-
-                    if !already_staff {
-                        let is_default_organization =
-                            !Self::user_has_default_organization(txn, user.id).await?;
-                        let staff = Staff::ActiveModel {
-                            user_id: Set(user.id),
-                            organization_id: Set(invitation.organization_id),
-                            public_id: Set(IdGenerator::generate_general_id()),
-                            name_primary: Set(format!(
-                                "{} {}",
-                                invitation.invitee_first_name, invitation.invitee_last_name
-                            )),
-                            name_secondary: Set(None),
-                            is_default_organization: Set(is_default_organization),
-                            status: Set(StaffStatus::Active),
-                            created_by_actor_id: Set(invitation.created_by_actor_id),
-                            updated_by_actor_id: Set(None),
-                            created_at: Set(now),
-                            updated_at: Set(now),
-                            ..Default::default()
-                        };
-                        staff.insert(txn).await?;
-                    }
-
-                    StaffInvitation::Entity::update_many()
-                        .col_expr(
-                            StaffInvitation::COLUMN.status,
-                            sea_orm::sea_query::Expr::value(StaffInvitationStatus::Accepted),
-                        )
-                        .col_expr(
-                            StaffInvitation::COLUMN.accepted_at,
-                            sea_orm::sea_query::Expr::value(Some(now)),
-                        )
-                        .col_expr(
-                            StaffInvitation::COLUMN.updated_at,
-                            sea_orm::sea_query::Expr::value(now),
-                        )
-                        .filter(StaffInvitation::COLUMN.id.eq(invitation.id))
-                        .exec(txn)
-                        .await?;
-
-                    StaffInvitation::Entity::update_many()
-                        .col_expr(
-                            StaffInvitation::COLUMN.status,
-                            sea_orm::sea_query::Expr::value(StaffInvitationStatus::Revoked),
-                        )
-                        .col_expr(
-                            StaffInvitation::COLUMN.updated_at,
-                            sea_orm::sea_query::Expr::value(now),
-                        )
-                        .filter(StaffInvitation::COLUMN.id.ne(invitation.id))
-                        .filter(
-                            StaffInvitation::COLUMN
-                                .organization_id
-                                .eq(invitation.organization_id),
-                        )
-                        .filter(
-                            StaffInvitation::COLUMN
-                                .invitee_email
-                                .eq(invitation.invitee_email.clone()),
-                        )
-                        .filter(
-                            StaffInvitation::COLUMN
-                                .status
-                                .eq(StaffInvitationStatus::Pending),
-                        )
-                        .exec(txn)
-                        .await?;
+                    Self::mark_invitation_accepted(txn, &invitation, now).await?;
+                    Self::revoke_other_pending_invitations(
+                        txn,
+                        invitation.id,
+                        invitation.organization_id,
+                        &invitation.invitee_email,
+                        now,
+                    )
+                    .await?;
 
                     Ok(())
                 })
@@ -310,47 +232,29 @@ impl StaffService {
 
     pub async fn resend_staff_invitation(
         ctx: &ServiceContext,
-        payload: ResendStaffInvitation,
+        invitation: StaffInvitation::Model,
     ) -> Result<StaffInvitationCreated, AppError> {
         let actor_id = ctx.get_actor_id()?;
-        let invitation = StaffInvitation::Entity::find()
-            .filter(
-                StaffInvitation::COLUMN
-                    .public_id
-                    .eq(payload.invitation_id.clone()),
-            )
-            .one(&ctx.app_state.primary_read_replica)
-            .await?
-            .ok_or(StaffServiceError::InvitationNotFound)?;
 
         if invitation.status != StaffInvitationStatus::Pending {
             return Err(StaffServiceError::InvitationAlreadyUsed.into());
         }
 
         let now = DateHelper::now().value();
-        let token_expires_at = DateHelper::from(now).add_days(2).value();
-        let invitation_token_id = IdGenerator::generate_general_id();
-        let invitation_token_secret = format!(
-            "{}.{}",
-            IdGenerator::generate_general_id(),
-            IdGenerator::generate_general_id()
-        );
-        let invitation_token = format!("{}.{}", invitation_token_id, invitation_token_secret);
-        let invitation_token_hash =
-            PasswordHelpers::hash_secret(&ctx.app_state.settings, &invitation_token_secret)?;
+        let token_bundle = Self::build_invitation_token_bundle(ctx)?;
 
         StaffInvitation::Entity::update_many()
             .col_expr(
                 StaffInvitation::COLUMN.invitation_token_hash,
-                sea_orm::sea_query::Expr::value(invitation_token_hash),
+                sea_orm::sea_query::Expr::value(token_bundle.token_hash),
             )
             .col_expr(
                 StaffInvitation::COLUMN.invitation_token_id,
-                sea_orm::sea_query::Expr::value(invitation_token_id),
+                sea_orm::sea_query::Expr::value(token_bundle.token_id),
             )
             .col_expr(
                 StaffInvitation::COLUMN.token_expires_at,
-                sea_orm::sea_query::Expr::value(token_expires_at),
+                sea_orm::sea_query::Expr::value(token_bundle.token_expires_at),
             )
             .col_expr(
                 StaffInvitation::COLUMN.updated_by_actor_id,
@@ -366,21 +270,16 @@ impl StaffService {
 
         Ok(StaffInvitationCreated {
             invitation_id: invitation.public_id,
-            invitation_token,
-            token_expires_at,
+            invitation_token: token_bundle.token,
+            token_expires_at: token_bundle.token_expires_at,
         })
     }
 
     pub async fn revoke_staff_invitation(
         ctx: &ServiceContext,
-        payload: RevokeStaffInvitation,
+        invitation: StaffInvitation::Model,
     ) -> Result<(), AppError> {
         let actor_id = ctx.get_actor_id()?;
-        let invitation = StaffInvitation::Entity::find()
-            .filter(StaffInvitation::COLUMN.public_id.eq(payload.invitation_id))
-            .one(&ctx.app_state.primary_read_replica)
-            .await?
-            .ok_or(StaffServiceError::InvitationNotFound)?;
 
         if invitation.status != StaffInvitationStatus::Pending {
             return Err(StaffServiceError::InvitationAlreadyUsed.into());
@@ -411,6 +310,7 @@ impl StaffService {
         db_transaction: &impl ConnectionTrait,
         ctx: &ServiceContext,
         organization_id: OrganizationPrimaryId,
+        branch_ids: &[BranchPrimaryId],
     ) -> Result<(), AppError> {
         let actor_id = ctx.get_actor_id()?;
         let user_id = ctx.get_user_id()?;
@@ -421,7 +321,7 @@ impl StaffService {
         let is_default_organization =
             !Self::user_has_default_organization(db_transaction, user_id).await?;
 
-        let staff_active_model = Staff::ActiveModel {
+        let staff = Staff::ActiveModel {
             user_id: Set(user_id),
             organization_id: Set(organization_id),
             public_id: Set(public_id),
@@ -434,8 +334,81 @@ impl StaffService {
             created_at: Set(now),
             updated_at: Set(now),
             ..Default::default()
-        };
-        staff_active_model.insert(db_transaction).await?;
+        }
+        .insert(db_transaction)
+        .await?;
+
+        Self::attach_staff_to_branches(db_transaction, actor_id, staff.id, branch_ids).await?;
+
+        Ok(())
+    }
+
+    async fn attach_invitation_to_branches(
+        db_transaction: &impl ConnectionTrait,
+        actor_id: i32,
+        invitation_id: i32,
+        branch_ids: &[BranchPrimaryId],
+    ) -> Result<(), AppError> {
+        let now = DateHelper::now().value();
+        for branch_id in branch_ids.iter().copied() {
+            let exists = StaffInvitationBranch::Entity::find()
+                .filter(StaffInvitationBranch::Column::StaffInvitationId.eq(invitation_id))
+                .filter(StaffInvitationBranch::Column::BranchId.eq(branch_id))
+                .one(db_transaction)
+                .await?
+                .is_some();
+
+            if exists {
+                continue;
+            }
+
+            StaffInvitationBranch::ActiveModel {
+                staff_invitation_id: Set(invitation_id),
+                branch_id: Set(branch_id),
+                created_by_actor_id: Set(actor_id),
+                updated_by_actor_id: Set(None),
+                created_at: Set(now),
+                updated_at: Set(now),
+                ..Default::default()
+            }
+            .insert(db_transaction)
+            .await?;
+        }
+
+        Ok(())
+    }
+
+    async fn attach_staff_to_branches(
+        db_transaction: &impl ConnectionTrait,
+        actor_id: i32,
+        staff_id: StaffPrimaryId,
+        branch_ids: &[BranchPrimaryId],
+    ) -> Result<(), AppError> {
+        let now = DateHelper::now().value();
+        for branch_id in branch_ids.iter().copied() {
+            let exists = StaffBranch::Entity::find()
+                .filter(StaffBranch::Column::StaffId.eq(staff_id))
+                .filter(StaffBranch::Column::BranchId.eq(branch_id))
+                .one(db_transaction)
+                .await?
+                .is_some();
+
+            if exists {
+                continue;
+            }
+
+            StaffBranch::ActiveModel {
+                staff_id: Set(staff_id),
+                branch_id: Set(branch_id),
+                created_by_actor_id: Set(actor_id),
+                updated_by_actor_id: Set(None),
+                created_at: Set(now),
+                updated_at: Set(now),
+                ..Default::default()
+            }
+            .insert(db_transaction)
+            .await?;
+        }
 
         Ok(())
     }
@@ -451,5 +424,233 @@ impl StaffService {
             .one(db_transaction)
             .await?
             .is_some())
+    }
+
+    fn build_invitation_token_bundle(
+        ctx: &ServiceContext,
+    ) -> Result<InvitationTokenBundle, AppError> {
+        let now = DateHelper::now().value();
+        let token_expires_at = DateHelper::from(now).add_days(2).value();
+        let token_id = IdGenerator::generate_general_id();
+        let token_secret = format!(
+            "{}.{}",
+            IdGenerator::generate_general_id(),
+            IdGenerator::generate_general_id()
+        );
+        let token = format!("{}.{}", token_id, token_secret);
+        let token_hash = PasswordHelpers::hash_secret(&ctx.app_state.settings, &token_secret)?;
+
+        Ok(InvitationTokenBundle {
+            token_id,
+            token,
+            token_hash,
+            token_expires_at,
+        })
+    }
+
+    async fn find_invitation_for_organization(
+        ctx: &ServiceContext,
+        invitation_public_id: &str,
+    ) -> Result<StaffInvitation::Model, AppError> {
+        Self::get_staff_invitation_by_public_id(
+            &ctx.app_state.primary_read_replica,
+            &invitation_public_id.to_string(),
+        )
+        .await
+    }
+
+    async fn get_valid_invitation_from_token(
+        ctx: &ServiceContext,
+        invitation_token: &str,
+    ) -> Result<StaffInvitation::Model, AppError> {
+        let (invitation_token_id, invitation_token_secret) = invitation_token
+            .split_once('.')
+            .ok_or(StaffServiceError::InvitationNotFound)?;
+        let invitation = StaffInvitation::Entity::find()
+            .filter(
+                StaffInvitation::COLUMN
+                    .invitation_token_id
+                    .eq(invitation_token_id),
+            )
+            .one(&ctx.app_state.primary_read_replica)
+            .await?
+            .ok_or(StaffServiceError::InvitationNotFound)?;
+
+        let is_valid_token = PasswordHelpers::verify_secret(
+            &ctx.app_state.settings,
+            invitation_token_secret,
+            &invitation.invitation_token_hash,
+        )?;
+        if !is_valid_token {
+            return Err(StaffServiceError::InvitationNotFound.into());
+        }
+
+        if invitation.status != StaffInvitationStatus::Pending {
+            return Err(StaffServiceError::InvitationAlreadyUsed.into());
+        }
+
+        Ok(invitation)
+    }
+
+    async fn expire_invitation_if_needed(
+        ctx: &ServiceContext,
+        invitation: &StaffInvitation::Model,
+        now: chrono::DateTime<chrono::Utc>,
+    ) -> Result<(), AppError> {
+        if invitation.token_expires_at >= Utc::now() {
+            return Ok(());
+        }
+
+        StaffInvitation::Entity::update_many()
+            .col_expr(
+                StaffInvitation::COLUMN.status,
+                sea_orm::sea_query::Expr::value(StaffInvitationStatus::Expired),
+            )
+            .col_expr(
+                StaffInvitation::COLUMN.updated_at,
+                sea_orm::sea_query::Expr::value(now),
+            )
+            .filter(StaffInvitation::COLUMN.id.eq(invitation.id))
+            .exec(&ctx.app_state.primary_write_replica)
+            .await?;
+
+        Err(StaffServiceError::InvitationExpired.into())
+    }
+
+    async fn get_or_create_invited_user(
+        db_transaction: &impl ConnectionTrait,
+        invitation: &StaffInvitation::Model,
+    ) -> Result<crate::entity::user_entity::Model, AppError> {
+        UserService::get_or_create_user_without_password(
+            db_transaction,
+            invitation.invitee_first_name.clone(),
+            invitation.invitee_last_name.clone(),
+            invitation.invitee_email.clone(),
+        )
+        .await
+    }
+
+    async fn ensure_user_credential(
+        db_transaction: &DatabaseTransaction,
+        settings: &crate::config::settings::Settings,
+        user_id: UserPrimaryId,
+        password: &String,
+    ) -> Result<(), AppError> {
+        let has_credential =
+            UserCredentialService::credential_exists(db_transaction, user_id).await?;
+        if !has_credential {
+            UserCredentialService::save_credential(settings, db_transaction, user_id, password)
+                .await?;
+        }
+        Ok(())
+    }
+
+    async fn get_invitation_branch_ids(
+        db_transaction: &impl ConnectionTrait,
+        invitation_id: i32,
+    ) -> Result<Vec<BranchPrimaryId>, AppError> {
+        Ok(StaffInvitationBranch::Entity::find()
+            .filter(StaffInvitationBranch::Column::StaffInvitationId.eq(invitation_id))
+            .all(db_transaction)
+            .await?
+            .into_iter()
+            .map(|item| item.branch_id)
+            .collect())
+    }
+
+    async fn find_or_create_staff_from_invitation(
+        db_transaction: &impl ConnectionTrait,
+        invitation: &StaffInvitation::Model,
+        user_id: UserPrimaryId,
+        now: chrono::DateTime<chrono::Utc>,
+    ) -> Result<Staff::Model, AppError> {
+        if let Some(staff) = Staff::Entity::find()
+            .filter(Staff::COLUMN.user_id.eq(user_id))
+            .filter(Staff::COLUMN.organization_id.eq(invitation.organization_id))
+            .one(db_transaction)
+            .await?
+        {
+            return Ok(staff);
+        }
+
+        let is_default_organization =
+            !Self::user_has_default_organization(db_transaction, user_id).await?;
+        Staff::ActiveModel {
+            user_id: Set(user_id),
+            organization_id: Set(invitation.organization_id),
+            public_id: Set(IdGenerator::generate_general_id()),
+            name_primary: Set(format!(
+                "{} {}",
+                invitation.invitee_first_name, invitation.invitee_last_name
+            )),
+            name_secondary: Set(None),
+            is_default_organization: Set(is_default_organization),
+            status: Set(StaffStatus::Active),
+            created_by_actor_id: Set(invitation.created_by_actor_id),
+            updated_by_actor_id: Set(None),
+            created_at: Set(now),
+            updated_at: Set(now),
+            ..Default::default()
+        }
+        .insert(db_transaction)
+        .await
+        .map_err(Into::into)
+    }
+
+    async fn mark_invitation_accepted(
+        db_transaction: &impl ConnectionTrait,
+        invitation: &StaffInvitation::Model,
+        now: chrono::DateTime<chrono::Utc>,
+    ) -> Result<(), AppError> {
+        StaffInvitation::Entity::update_many()
+            .col_expr(
+                StaffInvitation::COLUMN.status,
+                sea_orm::sea_query::Expr::value(StaffInvitationStatus::Accepted),
+            )
+            .col_expr(
+                StaffInvitation::COLUMN.accepted_at,
+                sea_orm::sea_query::Expr::value(Some(now)),
+            )
+            .col_expr(
+                StaffInvitation::COLUMN.updated_at,
+                sea_orm::sea_query::Expr::value(now),
+            )
+            .filter(StaffInvitation::COLUMN.id.eq(invitation.id))
+            .exec(db_transaction)
+            .await?;
+        Ok(())
+    }
+
+    async fn revoke_other_pending_invitations(
+        db_transaction: &impl ConnectionTrait,
+        accepted_invitation_id: i32,
+        organization_id: OrganizationPrimaryId,
+        invitee_email: &str,
+        now: chrono::DateTime<chrono::Utc>,
+    ) -> Result<(), AppError> {
+        StaffInvitation::Entity::update_many()
+            .col_expr(
+                StaffInvitation::COLUMN.status,
+                sea_orm::sea_query::Expr::value(StaffInvitationStatus::Revoked),
+            )
+            .col_expr(
+                StaffInvitation::COLUMN.updated_at,
+                sea_orm::sea_query::Expr::value(now),
+            )
+            .filter(StaffInvitation::COLUMN.id.ne(accepted_invitation_id))
+            .filter(StaffInvitation::COLUMN.organization_id.eq(organization_id))
+            .filter(
+                StaffInvitation::COLUMN
+                    .invitee_email
+                    .eq(invitee_email.to_string()),
+            )
+            .filter(
+                StaffInvitation::COLUMN
+                    .status
+                    .eq(StaffInvitationStatus::Pending),
+            )
+            .exec(db_transaction)
+            .await?;
+        Ok(())
     }
 }

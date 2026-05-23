@@ -17,6 +17,14 @@ http:
       }
   auth: inherit
 
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        let response_body = res.getBody();
+        let organization_public_id = response_body?.data;
+        bru.setEnvVar("organization_public_id", organization_public_id)
+
 settings:
   encodeUrl: true
   timeout: 0

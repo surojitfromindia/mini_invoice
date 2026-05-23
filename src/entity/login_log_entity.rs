@@ -40,3 +40,6 @@ pub struct Model {
     pub request_context: RequestContext,
 }
 impl ActiveModelBehavior for ActiveModel {}
+
+pub type LoginLogModel = Model;
+pub type LoginLogEntity = Entity;

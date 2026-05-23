@@ -22,6 +22,19 @@ pub struct CreateUserAccount {
 pub struct UserService;
 
 impl UserService {
+    pub async fn get_user_by_public_id_from_db(
+        db_transaction: &impl sea_orm::ConnectionTrait,
+        public_id: &PublicId,
+    ) -> Result<User::Model, AppError> {
+        let user = User::Entity::find()
+            .filter(User::COLUMN.public_id.eq(public_id.clone()))
+            .one(db_transaction)
+            .await
+            .map_err(AppError::Database)?
+            .ok_or(UserServiceError::NotFound)?;
+        Ok(user)
+    }
+
     pub async fn get_or_create_user_without_password(
         db_transaction: &impl sea_orm::ConnectionTrait,
         first_name: String,
@@ -132,12 +145,6 @@ impl UserService {
         ctx: &ServiceContext,
         public_id: &PublicId,
     ) -> Result<User::Model, AppError> {
-        let user = User::Entity::find()
-            .filter(User::COLUMN.public_id.eq(public_id.clone()))
-            .one(&ctx.app_state.primary_read_replica)
-            .await
-            .map_err(AppError::Database)?
-            .ok_or(UserServiceError::NotFound)?;
-        Ok(user)
+        Self::get_user_by_public_id_from_db(&ctx.app_state.primary_read_replica, public_id).await
     }
 }

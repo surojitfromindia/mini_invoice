@@ -1,9 +1,8 @@
 use crate::app_state::AppState;
 use crate::errors::app_error::AppError;
 use crate::errors::staff_service_errors::StaffServiceError;
-use crate::service::actor_service::ActorService;
+use crate::resolver::auth_resolver::AuthResolver;
 use crate::service::service_context::{AuthContext, RequestContext, ServiceContext};
-use crate::service::staff_service::StaffService;
 use crate::utils::jwt_helpers::JwtHelpers;
 use axum::extract::FromRequestParts;
 use axum::http::header::HeaderMap;
@@ -69,11 +68,11 @@ impl FromRequestParts<AppState> for AuthenticatedContext {
 
             // get user actor.
             let user_actor =
-                ActorService::get_user_actor(&state.primary_read_replica, &public_id).await?;
+                AuthResolver::resolve_user_actor(&state.primary_read_replica, &public_id).await?;
             let organization_id = match (user_actor.user_id, claims.organization_public_id) {
                 (Some(user_id), Some(organization_public_id)) => {
-                    let membership = StaffService::get_organization_for_user(
-                        &ServiceContext::from_app_state(state.clone()),
+                    let membership = AuthResolver::resolve_user_organization(
+                        &state.primary_read_replica,
                         user_id,
                         &organization_public_id,
                     )

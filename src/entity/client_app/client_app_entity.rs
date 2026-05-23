@@ -28,3 +28,6 @@ pub struct Model {
 }
 
 impl ActiveModelBehavior for ActiveModel {}
+
+pub type ClientAppModel = Model;
+pub type ClientAppEntity = Entity;

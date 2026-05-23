@@ -1,0 +1,38 @@
+info:
+  name: login
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{base_url_api_v1}}/auth/login"
+  body:
+    type: json
+    data: |-
+      {
+        "email": "surojit99923@gmail.com",
+        "password": "12345678"
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        const response_body = res.getBody();
+
+        const access_token = response_body?.data?.access_token;
+        if(access_token){
+          bru.setEnvVar("access_token", access_token)
+        }
+
+        const refresh_token = response_body.data.refresh_token
+        if(refresh_token){
+          bru.setEnvVar("refresh_token", refresh_token)
+        }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -21,6 +21,7 @@ pub enum AppError {
     InternalServer(String),
     ActorIdNotFound,
     UserIdNotFound,
+    OrganizationIdNotFound,
 }
 
 impl AppError {
@@ -55,6 +56,11 @@ impl AppError {
             AppError::UserIdNotFound => ErrorMeta {
                 code: "001.000.002",
                 message: "User id is missing inside context".into(),
+                http_code: HttpErrorCode::InternalServerError,
+            },
+            AppError::OrganizationIdNotFound => ErrorMeta {
+                code: "001.000.003",
+                message: "Organization id is missing inside context".into(),
                 http_code: HttpErrorCode::InternalServerError,
             },
         }

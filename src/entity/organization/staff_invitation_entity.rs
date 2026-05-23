@@ -44,3 +44,6 @@ pub struct Model {
 }
 
 impl ActiveModelBehavior for ActiveModel {}
+
+pub type StaffInvitationModel = Model;
+pub type StaffInvitationEntity = Entity;

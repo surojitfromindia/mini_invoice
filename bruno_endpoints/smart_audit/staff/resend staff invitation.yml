@@ -1,0 +1,31 @@
+info:
+  name: resend staff invitation
+  type: http
+  seq: 4
+
+http:
+  method: POST
+  url: "{{base_url_api_v1}}/staff/invitations/resend"
+  body:
+    type: json
+    data: |-
+      {
+        "invitation_id": "{{staff_invitation_id}}"
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        let response_body = res.getBody();
+        let invitation_id = response_body?.data?.invitation_id;
+        let invitation_token = response_body?.data?.invitation_token;
+        bru.setEnvVar("staff_invitation_id", invitation_id)
+        bru.setEnvVar("staff_invitation_token", invitation_token)
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

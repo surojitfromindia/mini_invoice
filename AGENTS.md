@@ -20,3 +20,7 @@ Database migration are done automatically  by sea orm entity, no script need.
 
 ## Entity structure
 If a entity span with multiple related entity, create separate folder for those.
+
+
+## Code comment
+add comment around primary module and complex code flow.

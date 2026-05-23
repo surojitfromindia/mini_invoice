@@ -17,3 +17,6 @@ pub struct Model {
     pub refresh_token_expires_at: Option<DateTimeUtc>,
 }
 impl ActiveModelBehavior for ActiveModel {}
+
+pub type UserCredentialsModel = Model;
+pub type UserCredentialsEntity = Entity;

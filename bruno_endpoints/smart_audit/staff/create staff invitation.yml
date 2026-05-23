@@ -1,0 +1,34 @@
+info:
+  name: create staff invitation
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{base_url_api_v1}}/staff/invitations"
+  body:
+    type: json
+    data: |-
+      {
+        "invitee_email": "staff1@example.com",
+        "invitee_first_name": "Staff",
+        "invitee_last_name": "One",
+        "invited_role": "auditor"
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        let response_body = res.getBody();
+        let invitation_id = response_body?.data?.invitation_id;
+        let invitation_token = response_body?.data?.invitation_token;
+        bru.setEnvVar("staff_invitation_id", invitation_id)
+        bru.setEnvVar("staff_invitation_token", invitation_token)
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

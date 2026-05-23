@@ -5,7 +5,7 @@ use crate::errors::app_error::AppError;
 pub struct ServiceContext {
     pub app_state: AppState,
     auth: Option<AuthContext>,
-    request_context: Option<RequestContext>
+    request_context: Option<RequestContext>,
 }
 
 impl ServiceContext {
@@ -13,7 +13,7 @@ impl ServiceContext {
         Self {
             app_state,
             auth: None,
-            request_context: None
+            request_context: None,
         }
     }
 
@@ -33,14 +33,22 @@ impl ServiceContext {
         Err(AppError::UserIdNotFound)
     }
 
+    pub fn get_organization_id(&self) -> Result<OrganizationPrimaryId, AppError> {
+        if let Some(auth) = &self.auth {
+            if let Some(organization_id) = auth.organization_id {
+                return Ok(organization_id);
+            }
+        }
+        Err(AppError::OrganizationIdNotFound)
+    }
+
     pub fn set_auth(&mut self, auth: AuthContext) {
         self.auth = Some(auth);
     }
-    
+
     pub fn set_request_context(&mut self, request_context: RequestContext) {
         self.request_context = Some(request_context);
     }
-    
 }
 
 #[derive(Clone)]

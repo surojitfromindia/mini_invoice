@@ -1,0 +1,21 @@
+info:
+  name: revoke staff invitation
+  type: http
+  seq: 5
+
+http:
+  method: POST
+  url: "{{base_url_api_v1}}/staff/invitations/revoke"
+  body:
+    type: json
+    data: |-
+      {
+        "invitation_id": "{{staff_invitation_id}}"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -18,3 +18,6 @@ pub struct Model {
     pub updated_at: DateTimeUtc,
 }
 impl ActiveModelBehavior for ActiveModel {}
+
+pub type OrganizationMetaModel = Model;
+pub type OrganizationMetaEntity = Entity;

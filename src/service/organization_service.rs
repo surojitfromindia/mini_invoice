@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::entity::{ActorPrimaryId, PublicId};
 use crate::errors::organization_service_errors::OrgServiceError;
+use crate::service::branch_service::BranchService;
 use crate::service::staff_service::StaffService;
 use crate::{
     entity::{
@@ -43,16 +44,24 @@ impl From<&CreateOrganization> for CreateOrganizationMeta {
 pub struct OrganizationService;
 
 impl OrganizationService {
-    pub async fn get_organization_by_public_id(
-        ctx: &ServiceContext,
+    pub async fn get_organization_by_public_id_from_db(
+        db_transaction: &impl ConnectionTrait,
         public_id: &str,
     ) -> Result<Organization::Model, AppError> {
         let organization = Organization::Entity::find()
             .filter(Organization::COLUMN.public_id.eq(public_id))
-            .one(&ctx.app_state.primary_read_replica)
+            .one(db_transaction)
             .await?
             .ok_or(OrgServiceError::NotFound)?;
         Ok(organization)
+    }
+
+    pub async fn get_organization_by_public_id(
+        ctx: &ServiceContext,
+        public_id: &str,
+    ) -> Result<Organization::Model, AppError> {
+        Self::get_organization_by_public_id_from_db(&ctx.app_state.primary_read_replica, public_id)
+            .await
     }
 
     pub async fn create_organization(
@@ -86,8 +95,25 @@ impl OrganizationService {
         // create organization meta data.
         Self::create_organization_meta(&txn, actor_id, created_organization.id, meta_payload)
             .await?;
+        // Every organization starts with a primary branch so downstream staff flows
+        // always have a valid default branch to attach people to.
+        let default_branch = BranchService::create_branch_for_organization(
+            &txn,
+            actor_id,
+            created_organization.id,
+            "Head Office".to_string(),
+            None,
+            true,
+        )
+        .await?;
         // register this user as organization staff
-        StaffService::create_staff_from_user(&txn, &ctx, created_organization.id).await?;
+        StaffService::create_staff_from_user(
+            &txn,
+            &ctx,
+            created_organization.id,
+            &[default_branch.id],
+        )
+        .await?;
 
         txn.commit().await?;
 

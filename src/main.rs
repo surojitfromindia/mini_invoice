@@ -7,6 +7,7 @@ mod config;
 mod db;
 mod entity;
 mod errors;
+mod resolver;
 mod service;
 mod utils;
 

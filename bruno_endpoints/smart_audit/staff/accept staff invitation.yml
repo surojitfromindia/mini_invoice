@@ -1,0 +1,28 @@
+info:
+  name: accept staff invitation
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{base_url_api_v1}}/staff/invitations/accept"
+  body:
+    type: json
+    data: |-
+      {
+        "invitation_token": "{{staff_invitation_token}}",
+        "password": "12345678"
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: before-request
+      code: |-
+        req.removeHeader("Authorization");
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

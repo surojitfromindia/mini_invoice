@@ -1,1 +1,1 @@
-mod client_app_entity;
+pub mod client_app_entity;

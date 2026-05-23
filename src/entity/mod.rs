@@ -9,5 +9,6 @@ mod common_types;
 pub mod organization;
 
 pub use common_types::{
-    ActorPrimaryId, ClientAppPrimaryId, OrganizationPrimaryId, PublicId, UserPrimaryId,
+    ActorPrimaryId, BranchPrimaryId, ClientAppPrimaryId, OrganizationPrimaryId, PublicId,
+    StaffInvitationPrimaryId, StaffPrimaryId, UserPrimaryId,
 };

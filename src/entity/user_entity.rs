@@ -30,3 +30,6 @@ pub struct Model {
 }
 
 impl ActiveModelBehavior for ActiveModel {}
+
+pub type UserModel = Model;
+pub type UserEntity = Entity;
