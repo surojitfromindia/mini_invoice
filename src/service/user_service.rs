@@ -22,6 +22,26 @@ pub struct CreateUserAccount {
 pub struct UserService;
 
 impl UserService {
+    pub async fn get_or_create_user_without_password(
+        db_transaction: &impl sea_orm::ConnectionTrait,
+        first_name: String,
+        last_name: String,
+        email: String,
+    ) -> Result<User::Model, AppError> {
+        let normalized_email = email.trim().to_lowercase();
+        if let Some(existing_user) = User::Entity::find_by_email(normalized_email.clone())
+            .one(db_transaction)
+            .await?
+        {
+            return Ok(existing_user);
+        }
+
+        let user = Self::prepare_user(first_name, last_name, normalized_email);
+        let user = user.insert(db_transaction).await?;
+        ActorService::create_from_user(db_transaction, user.id, user.public_id.clone()).await?;
+        Ok(user)
+    }
+
     pub async fn create_user_account(
         ctx: &ServiceContext,
         payload: CreateUserAccount,

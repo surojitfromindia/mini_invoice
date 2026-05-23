@@ -94,6 +94,18 @@ impl UserCredentialService {
         Ok(data)
     }
 
+    pub async fn credential_exists(
+        db_transaction: &impl ConnectionTrait,
+        user_id: i32,
+    ) -> Result<bool, AppError> {
+        let exists = UserCredentials::Entity::find()
+            .filter(UserCredentials::COLUMN.user_id.eq(user_id))
+            .one(db_transaction)
+            .await?
+            .is_some();
+        Ok(exists)
+    }
+
     pub async fn verify_login_password(
         settings: &Settings,
         plain_password: &str,
@@ -140,7 +152,10 @@ impl UserCredentialService {
         user_id: i32,
     ) -> Result<(), DbErr> {
         UserCredentials::Entity::update_many()
-            .col_expr(UserCredentials::COLUMN.refresh_token_hash, Expr::value(None::<String>))
+            .col_expr(
+                UserCredentials::COLUMN.refresh_token_hash,
+                Expr::value(None::<String>),
+            )
             .col_expr(
                 UserCredentials::COLUMN.refresh_token_expires_at,
                 Expr::value(None::<chrono::DateTime<chrono::Utc>>),

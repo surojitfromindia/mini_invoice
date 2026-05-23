@@ -1,7 +1,10 @@
-use sea_orm::{ActiveModelTrait, ConnectionTrait, Set, TransactionTrait};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter, Set, TransactionTrait,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::entity::{ActorPrimaryId, PublicId};
+use crate::errors::organization_service_errors::OrgServiceError;
 use crate::service::staff_service::StaffService;
 use crate::{
     entity::{
@@ -40,6 +43,18 @@ impl From<&CreateOrganization> for CreateOrganizationMeta {
 pub struct OrganizationService;
 
 impl OrganizationService {
+    pub async fn get_organization_by_public_id(
+        ctx: &ServiceContext,
+        public_id: &str,
+    ) -> Result<Organization::Model, AppError> {
+        let organization = Organization::Entity::find()
+            .filter(Organization::COLUMN.public_id.eq(public_id))
+            .one(&ctx.app_state.primary_read_replica)
+            .await?
+            .ok_or(OrgServiceError::NotFound)?;
+        Ok(organization)
+    }
+
     pub async fn create_organization(
         ctx: &ServiceContext,
         payload: CreateOrganization,
