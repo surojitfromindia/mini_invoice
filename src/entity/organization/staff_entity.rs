@@ -24,6 +24,7 @@ pub struct Model {
     pub public_id: PublicId,
     pub name_primary: String,
     pub name_secondary: Option<String>,
+    pub is_default_organization: bool,
     pub status: StaffStatus,
     pub created_by_actor_id: ActorPrimaryId,
     pub updated_by_actor_id: Option<ActorPrimaryId>,

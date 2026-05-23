@@ -19,6 +19,7 @@ pub enum TokenType {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AccessTokenClaims {
     pub public_id: String,
+    pub organization_public_id: Option<String>,
     pub token_type: TokenType,
     pub exp: usize,
     pub iat: usize,
@@ -27,6 +28,7 @@ pub struct AccessTokenClaims {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RefreshTokenClaims {
     pub public_id: String,
+    pub organization_public_id: Option<String>,
     pub token_type: TokenType,
     pub jti: String,
     pub exp: usize,
@@ -38,12 +40,17 @@ impl<'a> JwtHelpers<'a> {
         Self { settings }
     }
 
-    pub fn generate_access_token(&self, user_public_id: &str) -> Result<String, JwtError> {
+    pub fn generate_access_token(
+        &self,
+        user_public_id: &str,
+        organization_public_id: Option<&str>,
+    ) -> Result<String, JwtError> {
         let now = DateHelper::now().value();
         let exp = DateHelper::now().add_minutes(15).value();
 
         let claims = AccessTokenClaims {
             public_id: user_public_id.to_string(),
+            organization_public_id: organization_public_id.map(str::to_string),
             token_type: TokenType::Access,
             iat: now.timestamp() as usize,
             exp: exp.timestamp() as usize,
@@ -72,12 +79,17 @@ impl<'a> JwtHelpers<'a> {
         Ok(data.claims)
     }
 
-    pub fn generate_refresh_token(&self, user_public_id: &str) -> Result<String, JwtError> {
+    pub fn generate_refresh_token(
+        &self,
+        user_public_id: &str,
+        organization_public_id: Option<&str>,
+    ) -> Result<String, JwtError> {
         let now = DateHelper::now().value();
         let exp = DateHelper::now().add_days(30).value();
 
         let claims = RefreshTokenClaims {
             public_id: user_public_id.to_string(),
+            organization_public_id: organization_public_id.map(str::to_string),
             token_type: TokenType::Refresh,
             jti: nanoid!(),
             iat: now.timestamp() as usize,
@@ -126,10 +138,13 @@ mod tests {
     fn access_token_round_trip() {
         let settings = settings();
         let jwt = JwtHelpers::new(&settings);
-        let token = jwt.generate_access_token("user_123").unwrap();
+        let token = jwt
+            .generate_access_token("user_123", Some("org_123"))
+            .unwrap();
         let claims = jwt.verify_access_token(&token).unwrap();
 
         assert_eq!(claims.public_id, "user_123");
+        assert_eq!(claims.organization_public_id.as_deref(), Some("org_123"));
         assert_eq!(claims.token_type, TokenType::Access);
     }
 
@@ -137,10 +152,11 @@ mod tests {
     fn refresh_token_round_trip() {
         let settings = settings();
         let jwt = JwtHelpers::new(&settings);
-        let token = jwt.generate_refresh_token("user_123").unwrap();
+        let token = jwt.generate_refresh_token("user_123", None).unwrap();
         let claims = jwt.verify_refresh_token(&token).unwrap();
 
         assert_eq!(claims.public_id, "user_123");
+        assert_eq!(claims.organization_public_id, None);
         assert_eq!(claims.token_type, TokenType::Refresh);
         assert!(!claims.jti.is_empty());
     }

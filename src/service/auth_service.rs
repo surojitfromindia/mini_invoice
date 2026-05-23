@@ -4,6 +4,7 @@ use crate::errors::jwt_errors::JwtError;
 use crate::errors::user_service_errors::UserServiceError;
 use crate::service::login_log_service::LoginLogsService;
 use crate::service::service_context::ServiceContext;
+use crate::service::staff_service::StaffService;
 use crate::service::user_credential_service::UserCredentialService;
 use crate::service::user_service::UserService;
 use crate::utils::jwt_helpers::JwtHelpers;
@@ -143,8 +144,13 @@ impl AuthService {
     ) -> Result<AuthTokensResponse, AppError> {
         let settings = &ctx.app_state.settings;
         let jwt = JwtHelpers::new(settings);
-        let access_token = jwt.generate_access_token(user_public_id)?;
-        let refresh_token = jwt.generate_refresh_token(user_public_id)?;
+        let organization_public_id = StaffService::get_default_organization_for_user(ctx, user_id)
+            .await?
+            .map(|organization| organization.public_id);
+        let access_token =
+            jwt.generate_access_token(user_public_id, organization_public_id.as_deref())?;
+        let refresh_token =
+            jwt.generate_refresh_token(user_public_id, organization_public_id.as_deref())?;
         let refresh_claims = jwt.verify_refresh_token(&refresh_token)?;
 
         UserCredentialService::save_refresh_token(
