@@ -4,8 +4,10 @@ use sea_orm::ConnectionTrait;
 
 use crate::entity::organization::{
     branch_entity as Branch, organization_entity as Organization,
-    organization_meta_entity as OrganizationMeta, staff_invitation_entity as StaffInvitation,
-    staff_role_entity as StaffRole,
+    organization_meta_entity as OrganizationMeta,
+};
+use crate::entity::staff::{
+    staff_invitation_entity as StaffInvitation, staff_role_entity as StaffRole,
 };
 use crate::entity::{BranchPrimaryId, OrganizationPrimaryId, actor_entity as Actor};
 use crate::errors::app_error::AppError;

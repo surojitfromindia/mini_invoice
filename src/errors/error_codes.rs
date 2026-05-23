@@ -38,6 +38,7 @@ pub const STAFF_ROLE_NOT_FOUND: &str = "103.000.0006";
 pub const STAFF_INVALID_PERMISSION: &str = "103.000.0007";
 
 // Database and unexpected internal failures
+pub const LISTING_INVALID_PAGINATION: &str = "104.000.0001";
 pub const DATABASE_DUPLICATE_RECORD: &str = "900.001.0001";
 pub const DATABASE_OPERATION_FAILED: &str = "900.001.0002";
 pub const INTERNAL_SERVER_ERROR: &str = "900.000.0001";

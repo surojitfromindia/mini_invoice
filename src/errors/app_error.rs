@@ -20,6 +20,7 @@ pub enum AppError {
     Staff(StaffServiceError),
     Unauthorized,
     Forbidden { permission: String },
+    BadRequest { code: &'static str, message: String },
     Database(DbErr),
     InternalServer(String),
     ActorIdNotFound,
@@ -40,6 +41,11 @@ impl AppError {
                 code: error_codes::UNAUTHORIZED,
                 message: "Not authorized".into(),
                 http_code: HttpErrorCode::Unauthorized,
+            },
+            AppError::BadRequest { code, message } => ErrorMeta {
+                code,
+                message: message.clone(),
+                http_code: HttpErrorCode::BadRequest,
             },
             AppError::Forbidden { permission } => ErrorMeta {
                 code: error_codes::FORBIDDEN,

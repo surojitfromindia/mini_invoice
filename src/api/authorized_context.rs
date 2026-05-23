@@ -17,6 +17,10 @@ use super::context::AuthenticatedContext;
 pub struct AuthorizedContext(ServiceContext);
 
 impl AuthorizedContext {
+    pub fn into_context(self) -> ServiceContext {
+        self.0
+    }
+
     pub fn require_permission(self, permission: Permission) -> Result<ServiceContext, AppError> {
         AuthorizationService::require_permission(&self.0, permission)?;
         Ok(self.0)

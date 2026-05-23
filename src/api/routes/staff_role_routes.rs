@@ -1,9 +1,11 @@
 use crate::api::AuthorizedContext;
 use crate::api::api_response::ApiResponse;
+use crate::api::dto::common_dto::PublicIdResponse;
+use crate::api::dto::staff_role_dto::CreateStaffRoleRequestDto;
 use crate::app_state::AppState;
 use crate::auth::permission::Permission;
 use crate::errors::app_error::AppError;
-use crate::service::staff_role_service::{CreateStaffRole, StaffRoleService};
+use crate::service::staff_role_service::StaffRoleService;
 use axum::http::StatusCode;
 use axum::routing::post;
 use axum::{Json, Router};
@@ -14,12 +16,12 @@ pub fn routes() -> Router<AppState> {
 
 async fn create_staff_role_handler(
     authorized_ctx: AuthorizedContext,
-    Json(payload): Json<CreateStaffRole>,
-) -> Result<ApiResponse<String>, AppError> {
+    Json(payload): Json<CreateStaffRoleRequestDto>,
+) -> Result<ApiResponse<PublicIdResponse>, AppError> {
     let ctx = authorized_ctx.require_permission(Permission::StaffRoleCreate)?;
-    let role_public_id = StaffRoleService::create_staff_role(&ctx, payload).await?;
+    let role_public_id = StaffRoleService::create_staff_role(&ctx, payload.into()).await?;
     Ok(ApiResponse::success(
-        role_public_id,
+        PublicIdResponse::new(role_public_id),
         "Staff role created",
         Some(StatusCode::CREATED),
     ))

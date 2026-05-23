@@ -1,7 +1,7 @@
 use crate::auth::permission::deserialize_permission_codes;
 use sea_orm::{ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter};
 
-use crate::entity::organization::{
+use crate::entity::staff::{
     staff_entity::{self as Staff, StaffStatus},
     staff_role_entity as StaffRole,
 };

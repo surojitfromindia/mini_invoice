@@ -7,6 +7,7 @@ pub mod client_app;
 
 mod common_types;
 pub mod organization;
+pub mod staff;
 
 pub use common_types::{
     ActorPrimaryId, BranchPrimaryId, ClientAppPrimaryId, OrganizationPrimaryId, PublicId,

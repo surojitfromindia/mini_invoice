@@ -24,8 +24,8 @@ runtime:
     - type: after-response
       code: |-
         let response_body = res.getBody();
-        let staff_role_id = response_body?.data;
-        bru.setEnvVar("staff_role_id", staff_role_id)
+        let staff_role_public_id = response_body?.data?.public_id;
+        bru.setEnvVar("staff_role_public_id", staff_role_public_id)
 
 settings:
   encodeUrl: true

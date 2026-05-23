@@ -1,4 +1,11 @@
 use crate::entity::organization::organization_entity as Organization;
+use crate::entity::organization::organization_entity::OrganizationModel;
+use crate::entity::staff::staff_branch_entity as StaffBranch;
+use crate::entity::staff::staff_entity::{self as Staff, StaffStatus};
+use crate::entity::staff::staff_invitation_branch_entity as StaffInvitationBranch;
+use crate::entity::staff::staff_invitation_entity::{
+    self as StaffInvitation, StaffInvitationStatus,
+};
 use crate::entity::{BranchPrimaryId, OrganizationPrimaryId, StaffPrimaryId, UserPrimaryId};
 use crate::errors::app_error::AppError;
 use crate::errors::staff_service_errors::StaffServiceError;
@@ -6,27 +13,18 @@ use crate::resolver::staff_payload_resolver::ResolvedCreateStaffInvitation;
 use crate::service::service_context::ServiceContext;
 use crate::service::user_credential_service::UserCredentialService;
 use crate::service::user_service::UserService;
+use crate::utils::date_helpers::DateHelper;
+use crate::utils::id_generator::IdGenerator;
 use crate::utils::password_helpers::PasswordHelpers;
 use chrono::Utc;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseTransaction, EntityTrait, QueryFilter,
     Set, TransactionTrait,
 };
-use serde::Deserialize;
-
-use crate::entity::organization::staff_branch_entity as StaffBranch;
-use crate::entity::organization::staff_entity::{self as Staff, StaffStatus};
-use crate::entity::organization::staff_invitation_branch_entity as StaffInvitationBranch;
-use crate::entity::organization::staff_invitation_entity::{
-    self as StaffInvitation, StaffInvitationStatus,
-};
-use crate::utils::date_helpers::DateHelper;
-use crate::utils::id_generator::IdGenerator;
 
 pub struct StaffService;
 
-#[derive(Deserialize)]
-pub struct CreateStaffInvitation {
+pub struct CreateStaffInvitationInput {
     pub invitee_email: String,
     pub invitee_first_name: String,
     pub invitee_last_name: String,
@@ -34,19 +32,16 @@ pub struct CreateStaffInvitation {
     pub branch_public_ids: Option<Vec<String>>,
 }
 
-#[derive(Deserialize)]
-pub struct AcceptStaffInvitation {
+pub struct AcceptStaffInvitationInput {
     pub invitation_token: String,
     pub password: String,
 }
 
-#[derive(Deserialize)]
-pub struct ResendStaffInvitation {
+pub struct ResendStaffInvitationInput {
     pub invitation_id: String,
 }
 
-#[derive(Deserialize)]
-pub struct RevokeStaffInvitation {
+pub struct RevokeStaffInvitationInput {
     pub invitation_id: String,
 }
 
@@ -65,20 +60,20 @@ struct InvitationTokenBundle {
 
 impl StaffService {
     pub async fn get_default_organization_for_user(
-        ctx: &ServiceContext,
+        db_transaction: &impl ConnectionTrait,
         user_id: UserPrimaryId,
-    ) -> Result<Option<Organization::Model>, AppError> {
+    ) -> Result<Option<OrganizationModel>, AppError> {
         let staff = Staff::Entity::find()
             .filter(Staff::COLUMN.user_id.eq(user_id))
             .filter(Staff::COLUMN.status.eq(StaffStatus::Active))
             .filter(Staff::COLUMN.is_default_organization.eq(true))
-            .one(&ctx.app_state.primary_read_replica)
+            .one(db_transaction)
             .await?;
 
         match staff {
             Some(staff) => {
                 let organization = Organization::Entity::find_by_id(staff.organization_id)
-                    .one(&ctx.app_state.primary_read_replica)
+                    .one(db_transaction)
                     .await?
                     .ok_or(StaffServiceError::NotFound)?;
                 Ok(Some(organization))
@@ -158,7 +153,7 @@ impl StaffService {
 
     pub async fn accept_staff_invitation(
         ctx: &ServiceContext,
-        payload: AcceptStaffInvitation,
+        payload: AcceptStaffInvitationInput,
     ) -> Result<(), AppError> {
         let now = DateHelper::now().value();
         let invitation =
@@ -294,7 +289,9 @@ impl StaffService {
         let now = DateHelper::now().value();
         let public_id = IdGenerator::generate_general_id();
         let is_default_organization =
-            !Self::user_has_default_organization(db_transaction, user_id).await?;
+            Self::get_default_organization_for_user(db_transaction, user_id)
+                .await?
+                .is_none();
 
         let staff = Staff::ActiveModel {
             user_id: Set(user_id),
@@ -387,19 +384,6 @@ impl StaffService {
         }
 
         Ok(())
-    }
-
-    async fn user_has_default_organization(
-        db_transaction: &impl ConnectionTrait,
-        user_id: UserPrimaryId,
-    ) -> Result<bool, AppError> {
-        Ok(Staff::Entity::find()
-            .filter(Staff::COLUMN.user_id.eq(user_id))
-            .filter(Staff::COLUMN.status.eq(StaffStatus::Active))
-            .filter(Staff::COLUMN.is_default_organization.eq(true))
-            .one(db_transaction)
-            .await?
-            .is_some())
     }
 
     fn build_invitation_token_bundle(
@@ -539,7 +523,9 @@ impl StaffService {
         }
 
         let is_default_organization =
-            !Self::user_has_default_organization(db_transaction, user_id).await?;
+            Self::get_default_organization_for_user(db_transaction, user_id)
+                .await?
+                .is_none();
         Staff::ActiveModel {
             user_id: Set(user_id),
             organization_id: Set(invitation.organization_id),

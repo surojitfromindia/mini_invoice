@@ -1,5 +1,5 @@
 info:
-  name: Reigter new user account
+  name: register new user account
   type: http
   seq: 1
 

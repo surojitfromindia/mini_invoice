@@ -1,10 +1,6 @@
-use sea_orm::{
-    ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter, Set, TransactionTrait,
-};
-use serde::{Deserialize, Serialize};
+use sea_orm::{ActiveModelTrait, ConnectionTrait, Set, TransactionTrait};
 
 use crate::entity::{ActorPrimaryId, PublicId};
-use crate::errors::organization_service_errors::OrgServiceError;
 use crate::service::branch_service::BranchService;
 use crate::service::staff_role_service::StaffRoleService;
 use crate::service::staff_service::StaffService;
@@ -20,8 +16,7 @@ use crate::{
     utils::{date_helpers::DateHelper, id_generator::IdGenerator},
 };
 
-#[derive(Deserialize, Serialize)]
-pub struct CreateOrganization {
+pub struct CreateOrganizationInput {
     pub name_primary: String,
     pub name_secondary: Option<String>,
     pub country_iso_code: String,
@@ -33,8 +28,8 @@ struct CreateOrganizationMeta {
     pub currency_iso_code: String,
 }
 
-impl From<&CreateOrganization> for CreateOrganizationMeta {
-    fn from(value: &CreateOrganization) -> Self {
+impl From<&CreateOrganizationInput> for CreateOrganizationMeta {
+    fn from(value: &CreateOrganizationInput) -> Self {
         Self {
             country_iso_code: value.country_iso_code.clone(),
             currency_iso_code: value.currency_iso_code.clone(),
@@ -47,7 +42,7 @@ pub struct OrganizationService;
 impl OrganizationService {
     pub async fn create_organization(
         ctx: &ServiceContext,
-        payload: CreateOrganization,
+        payload: CreateOrganizationInput,
     ) -> Result<PublicId, AppError> {
         let actor_id = ctx.get_actor_id()?;
         let user_id = ctx.get_user_id()?;

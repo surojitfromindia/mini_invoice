@@ -1,0 +1,31 @@
+info:
+  name: create branch
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{base_url_api_v1}}/branch"
+  body:
+    type: json
+    data: |-
+      {
+        "name_primary": "HQ",
+        "name_secondary": "Main office",
+        "is_primary": true
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        let response_body = res.getBody();
+        let branch_public_id = response_body?.data?.public_id;
+        bru.setEnvVar("branch_public_id", branch_public_id)
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

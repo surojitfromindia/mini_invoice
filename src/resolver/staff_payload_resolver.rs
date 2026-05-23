@@ -1,11 +1,11 @@
 use sea_orm::ConnectionTrait;
 
-use crate::entity::organization::staff_invitation_entity as StaffInvitation;
+use crate::entity::staff::staff_invitation_entity as StaffInvitation;
 use crate::entity::{BranchPrimaryId, OrganizationPrimaryId};
 use crate::errors::app_error::AppError;
 use crate::errors::staff_service_errors::StaffServiceError;
 use crate::service::staff_service::{
-    CreateStaffInvitation, ResendStaffInvitation, RevokeStaffInvitation,
+    CreateStaffInvitationInput, ResendStaffInvitationInput, RevokeStaffInvitationInput,
 };
 
 use super::public_id_resolver::PublicIdResolver;
@@ -27,7 +27,7 @@ impl StaffPayloadResolver {
     pub async fn resolve_create_staff_invitation(
         db_transaction: &impl ConnectionTrait,
         organization_id: OrganizationPrimaryId,
-        payload: CreateStaffInvitation,
+        payload: CreateStaffInvitationInput,
     ) -> Result<ResolvedCreateStaffInvitation, AppError> {
         let branch_ids = PublicIdResolver::branch_ids_for_organization(
             db_transaction,
@@ -54,7 +54,7 @@ impl StaffPayloadResolver {
     pub async fn resolve_resend_staff_invitation(
         db_transaction: &impl ConnectionTrait,
         organization_id: OrganizationPrimaryId,
-        payload: ResendStaffInvitation,
+        payload: ResendStaffInvitationInput,
     ) -> Result<StaffInvitation::Model, AppError> {
         Self::resolve_invitation_for_organization(
             db_transaction,
@@ -67,7 +67,7 @@ impl StaffPayloadResolver {
     pub async fn resolve_revoke_staff_invitation(
         db_transaction: &impl ConnectionTrait,
         organization_id: OrganizationPrimaryId,
-        payload: RevokeStaffInvitation,
+        payload: RevokeStaffInvitationInput,
     ) -> Result<StaffInvitation::Model, AppError> {
         Self::resolve_invitation_for_organization(
             db_transaction,

@@ -1,10 +1,16 @@
+use sea_orm::sea_query::Expr;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter, Set, TransactionTrait,
+    ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter, QueryOrder,
+    QuerySelect, Set, TransactionTrait,
 };
-use serde::{Deserialize, Serialize};
 
+use crate::api::dto::branch_dto::BranchListItemDto;
+use crate::api::dto::common_dto::PageListResult;
+use crate::db::listing::{execute_page_query, validate_page_pagination};
+use crate::entity::organization::branch_entity::BranchModel;
 use crate::entity::organization::{
-    branch_entity as Branch, organization_meta_entity as OrganizationMeta,
+    branch_entity as Branch, organization_entity as Organization,
+    organization_meta_entity as OrganizationMeta,
 };
 use crate::entity::{ActorPrimaryId, BranchPrimaryId, OrganizationPrimaryId, PublicId};
 use crate::errors::app_error::AppError;
@@ -12,11 +18,37 @@ use crate::service::service_context::ServiceContext;
 use crate::utils::date_helpers::DateHelper;
 use crate::utils::id_generator::IdGenerator;
 
-#[derive(Deserialize, Serialize)]
-pub struct CreateBranch {
+pub struct CreateBranchInput {
     pub name_primary: String,
     pub name_secondary: Option<String>,
     pub is_primary: Option<bool>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BranchSortField {
+    CreatedAt,
+    NamePrimary,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SortDirection {
+    Asc,
+    Desc,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BranchInclude {
+    Organization,
+}
+
+pub struct BranchListPageInput {
+    pub page: u64,
+    pub per_page: u64,
+    pub name: Option<String>,
+    pub is_primary: Option<bool>,
+    pub sort: Option<BranchSortField>,
+    pub direction: Option<SortDirection>,
+    pub include: Vec<BranchInclude>,
 }
 
 pub struct BranchService;
@@ -24,7 +56,7 @@ pub struct BranchService;
 impl BranchService {
     pub async fn create_branch(
         ctx: &ServiceContext,
-        payload: CreateBranch,
+        payload: CreateBranchInput,
     ) -> Result<PublicId, AppError> {
         let actor_id = ctx.get_actor_id()?;
         let organization_id = ctx.get_organization_id()?;
@@ -45,6 +77,30 @@ impl BranchService {
         Ok(branch.public_id)
     }
 
+    pub async fn list_branches_page(
+        ctx: &ServiceContext,
+        input: BranchListPageInput,
+    ) -> Result<PageListResult<BranchListItemDto>, AppError> {
+        let pagination = validate_page_pagination(input.page, input.per_page)?;
+        let organization_id = ctx.get_organization_id()?;
+        let include_organization = input.include.contains(&BranchInclude::Organization);
+        let sort_field = input.sort.unwrap_or(BranchSortField::CreatedAt);
+        let sort_direction = input.direction.unwrap_or(SortDirection::Desc);
+
+        let query =
+            Self::build_branch_list_query(organization_id, input.name.as_deref(), input.is_primary);
+        let query = Self::apply_page_sort(query, sort_field, sort_direction);
+        let query = Self::select_branch_list_columns(query).into_model::<BranchListItemDto>();
+
+        let mut result =
+            execute_page_query(&ctx.app_state.primary_read_replica, query, pagination).await?;
+        if !include_organization {
+            Self::strip_optional_organization(&mut result.rows);
+        }
+
+        Ok(result)
+    }
+
     pub async fn create_branch_for_organization(
         db_transaction: &impl ConnectionTrait,
         actor_id: ActorPrimaryId,
@@ -52,7 +108,7 @@ impl BranchService {
         name_primary: String,
         name_secondary: Option<String>,
         is_primary_requested: bool,
-    ) -> Result<Branch::Model, AppError> {
+    ) -> Result<BranchModel, AppError> {
         let now = DateHelper::now().value();
         let existing_branch = Branch::Entity::find()
             .filter(Branch::COLUMN.organization_id.eq(organization_id))
@@ -143,5 +199,68 @@ impl BranchService {
             .await?;
 
         Ok(())
+    }
+
+    fn build_branch_list_query(
+        organization_id: OrganizationPrimaryId,
+        name: Option<&str>,
+        is_primary: Option<bool>,
+    ) -> sea_orm::Select<Branch::Entity> {
+        let mut query = Branch::Entity::find()
+            .left_join(Organization::Entity)
+            .filter(Branch::COLUMN.organization_id.eq(organization_id));
+
+        if let Some(name) = name.map(str::trim).filter(|value| !value.is_empty()) {
+            query = query.filter(Branch::COLUMN.name_primary.contains(name));
+        }
+
+        if let Some(is_primary) = is_primary {
+            query = query.filter(Branch::COLUMN.is_primary.eq(is_primary));
+        }
+
+        query
+    }
+
+    fn apply_page_sort(
+        query: sea_orm::Select<Branch::Entity>,
+        sort_field: BranchSortField,
+        sort_direction: SortDirection,
+    ) -> sea_orm::Select<Branch::Entity> {
+        match (sort_field, sort_direction) {
+            (BranchSortField::CreatedAt, SortDirection::Asc) => query
+                .order_by_asc(Branch::Column::CreatedAt)
+                .order_by_asc(Branch::Column::Id),
+            (BranchSortField::CreatedAt, SortDirection::Desc) => query
+                .order_by_desc(Branch::Column::CreatedAt)
+                .order_by_desc(Branch::Column::Id),
+            (BranchSortField::NamePrimary, SortDirection::Asc) => query
+                .order_by_asc(Branch::Column::NamePrimary)
+                .order_by_asc(Branch::Column::Id),
+            (BranchSortField::NamePrimary, SortDirection::Desc) => query
+                .order_by_desc(Branch::Column::NamePrimary)
+                .order_by_desc(Branch::Column::Id),
+        }
+    }
+
+    fn select_branch_list_columns<Q>(query: Q) -> Q
+    where
+        Q: QuerySelect<QueryStatement = sea_orm::sea_query::SelectStatement>,
+    {
+        query
+            .select_only()
+            .column(Branch::Column::PublicId)
+            .column(Branch::Column::NamePrimary)
+            .column(Branch::Column::NameSecondary)
+            .column(Branch::Column::IsPrimary)
+            .expr_as(
+                Expr::col((Organization::Entity, Organization::Column::NamePrimary)),
+                "organization_name_primary",
+            )
+    }
+
+    fn strip_optional_organization(rows: &mut [BranchListItemDto]) {
+        for row in rows {
+            row.organization_name_primary = None;
+        }
     }
 }

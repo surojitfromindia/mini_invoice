@@ -1,4 +1,4 @@
-use crate::entity::user_entity::{self as User, UserStatus};
+use crate::entity::user_entity::{self as User, UserModel, UserStatus};
 
 use crate::entity::{PublicId, UserPrimaryId};
 use crate::errors::app_error::AppError;
@@ -9,10 +9,8 @@ use crate::service::user_credential_service::UserCredentialService;
 use crate::utils::date_helpers::DateHelper;
 use crate::utils::id_generator::IdGenerator;
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set, TransactionTrait};
-use serde::Deserialize;
 
-#[derive(Deserialize)]
-pub struct CreateUserAccount {
+pub struct CreateUserAccountInput {
     pub first_name: String,
     pub last_name: String,
     pub email: String,
@@ -25,7 +23,7 @@ impl UserService {
     pub async fn get_user_by_public_id_from_db(
         db_transaction: &impl sea_orm::ConnectionTrait,
         public_id: &PublicId,
-    ) -> Result<User::Model, AppError> {
+    ) -> Result<UserModel, AppError> {
         let user = User::Entity::find()
             .filter(User::COLUMN.public_id.eq(public_id.clone()))
             .one(db_transaction)
@@ -40,7 +38,7 @@ impl UserService {
         first_name: String,
         last_name: String,
         email: String,
-    ) -> Result<User::Model, AppError> {
+    ) -> Result<UserModel, AppError> {
         let normalized_email = email.trim().to_lowercase();
         if let Some(existing_user) = User::Entity::find_by_email(normalized_email.clone())
             .one(db_transaction)
@@ -57,7 +55,7 @@ impl UserService {
 
     pub async fn create_user_account(
         ctx: &ServiceContext,
-        payload: CreateUserAccount,
+        payload: CreateUserAccountInput,
     ) -> Result<String, AppError> {
         let settings = ctx.app_state.settings.clone();
         let email = payload.email.trim().to_lowercase();
@@ -132,7 +130,7 @@ impl UserService {
     pub async fn get_user_by_id(
         ctx: &ServiceContext,
         id: UserPrimaryId,
-    ) -> Result<User::Model, AppError> {
+    ) -> Result<UserModel, AppError> {
         let user = User::Entity::find_by_id(id)
             .one(&ctx.app_state.primary_read_replica)
             .await

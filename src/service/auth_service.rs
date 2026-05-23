@@ -9,13 +9,11 @@ use crate::service::user_credential_service::UserCredentialService;
 use crate::service::user_service::UserService;
 use crate::utils::jwt_helpers::JwtHelpers;
 use chrono::Utc;
-use serde::{Deserialize, Serialize};
 
 #[allow(dead_code)]
 pub struct AuthService;
 
-#[derive(Deserialize, Serialize)]
-pub struct AuthTokensResponse {
+pub struct AuthTokens {
     pub access_token: String,
     pub refresh_token: String,
 }
@@ -25,7 +23,7 @@ impl AuthService {
         ctx: &ServiceContext,
         email: String,
         password: String,
-    ) -> Result<AuthTokensResponse, AppError> {
+    ) -> Result<AuthTokens, AppError> {
         let settings = &ctx.app_state.settings;
         let email = email.trim().to_lowercase();
         let (user_id, user_public_id) = match UserService::get_user_id_by_email(ctx, &email).await {
@@ -82,7 +80,7 @@ impl AuthService {
     pub async fn refresh_tokens(
         ctx: &ServiceContext,
         refresh_token: String,
-    ) -> Result<AuthTokensResponse, AppError> {
+    ) -> Result<AuthTokens, AppError> {
         let settings = &ctx.app_state.settings;
         let jwt = JwtHelpers::new(settings);
         let claims = jwt.verify_refresh_token(&refresh_token)?;
@@ -141,12 +139,15 @@ impl AuthService {
         ctx: &ServiceContext,
         user_id: i32,
         user_public_id: &str,
-    ) -> Result<AuthTokensResponse, AppError> {
+    ) -> Result<AuthTokens, AppError> {
         let settings = &ctx.app_state.settings;
         let jwt = JwtHelpers::new(settings);
-        let organization_public_id = StaffService::get_default_organization_for_user(ctx, user_id)
-            .await?
-            .map(|organization| organization.public_id);
+        let organization_public_id = StaffService::get_default_organization_for_user(
+            &ctx.app_state.primary_read_replica,
+            user_id,
+        )
+        .await?
+        .map(|organization| organization.public_id);
         let access_token =
             jwt.generate_access_token(user_public_id, organization_public_id.as_deref())?;
         let refresh_token =
@@ -163,7 +164,7 @@ impl AuthService {
         )
         .await?;
 
-        Ok(AuthTokensResponse {
+        Ok(AuthTokens {
             access_token,
             refresh_token,
         })

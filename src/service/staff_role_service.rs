@@ -1,8 +1,7 @@
 use sea_orm::{ActiveModelTrait, ConnectionTrait, Set};
-use serde::Deserialize;
 
 use crate::auth::permission::{Permission, normalize_permission_codes, serialize_permission_codes};
-use crate::entity::organization::staff_role_entity as StaffRole;
+use crate::entity::staff::staff_role_entity as StaffRole;
 use crate::entity::{ActorPrimaryId, OrganizationPrimaryId, PublicId};
 use crate::errors::app_error::AppError;
 use crate::service::service_context::ServiceContext;
@@ -11,8 +10,7 @@ use crate::utils::id_generator::IdGenerator;
 
 pub struct StaffRoleService;
 
-#[derive(Deserialize)]
-pub struct CreateStaffRole {
+pub struct CreateStaffRoleInput {
     pub name_primary: String,
     pub name_secondary: Option<String>,
     pub permission_codes: Vec<String>,
@@ -25,7 +23,7 @@ pub struct DefaultOrganizationRoles {
 impl StaffRoleService {
     pub async fn create_staff_role(
         ctx: &ServiceContext,
-        payload: CreateStaffRole,
+        payload: CreateStaffRoleInput,
     ) -> Result<PublicId, AppError> {
         let actor_id = ctx.get_actor_id()?;
         let organization_id = ctx.get_organization_id()?;

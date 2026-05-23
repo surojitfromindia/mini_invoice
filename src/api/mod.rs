@@ -1,6 +1,7 @@
 pub mod api_response;
 mod authorized_context;
 pub mod context;
+pub mod dto;
 mod middlewares;
 pub mod routes;
 

@@ -8,3 +8,13 @@ variables:
     value: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJwdWJsaWNfaWQiOiI3OEEyMjc2RUE2OTYiLCJvcmdhbml6YXRpb25fcHVibGljX2lkIjpudWxsLCJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzc5NTE5NzA3LCJpYXQiOjE3Nzk1MTg4MDd9.7YxFjhvykYtVcQkMQQ4fiU4j5tz9nPNULwffV8iUzsM
   - name: refresh_token
     value: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJwdWJsaWNfaWQiOiI3OEEyMjc2RUE2OTYiLCJvcmdhbml6YXRpb25fcHVibGljX2lkIjpudWxsLCJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImp0aSI6IjJHUGJ0RzM5am1tb2tHVmswLTlfeiIsImV4cCI6MTc4MjExMTIzOSwiaWF0IjoxNzc5NTE5MjM5fQ.ugt0WYilMpk5O5qwViQyfLNrWbvvrIB3sqBxmLMR75I
+  - name: organization_public_id
+    value: ""
+  - name: staff_role_public_id
+    value: ""
+  - name: staff_invitation_id
+    value: ""
+  - name: staff_invitation_token
+    value: ""
+  - name: branch_public_id
+    value: ""
