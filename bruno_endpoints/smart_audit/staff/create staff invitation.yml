@@ -13,7 +13,7 @@ http:
         "invitee_email": "staff1@example.com",
         "invitee_first_name": "Staff",
         "invitee_last_name": "One",
-        "invited_role": "auditor"
+        "role_public_id": "{{staff_role_id}}"
       }
   auth: inherit
 

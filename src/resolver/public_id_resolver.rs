@@ -2,7 +2,7 @@ use sea_orm::ConnectionTrait;
 
 use crate::entity::organization::{
     branch_entity as Branch, organization_entity as Organization, staff_entity as Staff,
-    staff_invitation_entity as StaffInvitation,
+    staff_invitation_entity as StaffInvitation, staff_role_entity as StaffRole,
 };
 use crate::entity::{PublicId, actor_entity as Actor, user_entity as User};
 use crate::errors::app_error::AppError;
@@ -68,6 +68,17 @@ impl PublicIdResolver {
             .one(db_transaction)
             .await?
             .ok_or(StaffServiceError::InvitationNotFound.into())
+    }
+
+    pub async fn staff_role(
+        db_transaction: &impl ConnectionTrait,
+        public_id: &str,
+    ) -> Result<StaffRole::Model, AppError> {
+        StaffRole::Entity::find()
+            .filter(StaffRole::Column::PublicId.eq(public_id))
+            .one(db_transaction)
+            .await?
+            .ok_or(StaffServiceError::RoleNotFound.into())
     }
 
     pub async fn user_actor(

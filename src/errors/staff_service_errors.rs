@@ -4,6 +4,8 @@ use crate::errors::error_meta::{ErrorMeta, ErrorMetadata};
 #[derive(Debug)]
 pub enum StaffServiceError {
     NotFound,
+    RoleNotFound,
+    InvalidPermission,
     InvitationNotFound,
     InvitationExpired,
     InvitationAlreadyUsed,
@@ -21,6 +23,16 @@ impl ErrorMetadata for StaffServiceError {
             Self::NotFound => {
                 ErrorMeta::new("103.000.0002", "Staff not found", HttpErrorCode::NotFound)
             }
+            Self::RoleNotFound => ErrorMeta::new(
+                "103.000.0006",
+                "Staff role not found",
+                HttpErrorCode::NotFound,
+            ),
+            Self::InvalidPermission => ErrorMeta::new(
+                "103.000.0007",
+                "Invalid staff permission",
+                HttpErrorCode::Conflict,
+            ),
             Self::InvitationNotFound => ErrorMeta::new(
                 "103.000.0003",
                 "Staff invitation not found",

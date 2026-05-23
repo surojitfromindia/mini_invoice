@@ -1,5 +1,7 @@
 use crate::app_state::AppState;
-use crate::entity::{ActorPrimaryId, ClientAppPrimaryId, OrganizationPrimaryId, UserPrimaryId};
+use crate::entity::{
+    ActorPrimaryId, ClientAppPrimaryId, OrganizationPrimaryId, StaffPrimaryId, UserPrimaryId,
+};
 use crate::errors::app_error::AppError;
 #[derive(Clone)]
 pub struct ServiceContext {
@@ -49,6 +51,12 @@ impl ServiceContext {
     pub fn set_request_context(&mut self, request_context: RequestContext) {
         self.request_context = Some(request_context);
     }
+
+    pub fn get_staff_access(&self) -> Option<&OrganizationStaffAccess> {
+        self.auth
+            .as_ref()
+            .and_then(|auth| auth.organization_staff.as_ref())
+    }
 }
 
 #[derive(Clone)]
@@ -62,4 +70,14 @@ pub struct AuthContext {
     pub user_id: Option<UserPrimaryId>,
     pub client_app_id: Option<ClientAppPrimaryId>,
     pub organization_id: Option<OrganizationPrimaryId>,
+    pub organization_staff: Option<OrganizationStaffAccess>,
+}
+
+#[derive(Debug, Clone)]
+pub struct OrganizationStaffAccess {
+    pub staff_id: StaffPrimaryId,
+    pub organization_id: OrganizationPrimaryId,
+    pub role_id: i32,
+    pub role_public_id: String,
+    pub permission_codes: Vec<String>,
 }

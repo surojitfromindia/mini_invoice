@@ -1,0 +1,34 @@
+info:
+  name: create staff role
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{base_url_api_v1}}/staff_role"
+  body:
+    type: json
+    data: |-
+      {
+        "name_primary": "Auditor",
+        "name_secondary": "Auditor",
+        "permission_codes": [
+          "staff.invite",
+          "staff.invitation.resend"
+        ]
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        let response_body = res.getBody();
+        let staff_role_id = response_body?.data;
+        bru.setEnvVar("staff_role_id", staff_role_id)
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

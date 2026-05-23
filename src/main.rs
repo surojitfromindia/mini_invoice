@@ -3,6 +3,7 @@ use tokio::net::TcpListener;
 mod api;
 mod app;
 mod app_state;
+mod auth;
 mod config;
 mod db;
 mod entity;

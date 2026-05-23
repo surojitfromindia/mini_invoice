@@ -1,5 +1,8 @@
 use crate::api::api_response::ApiResponse;
-use crate::api::{AuthenticatedContext, PublicContext};
+use crate::api::{
+    AuthorizedContext, PublicContext, StaffInvitationResendPermission,
+    StaffInvitationRevokePermission, StaffInvitePermission,
+};
 use crate::app_state::AppState;
 use crate::errors::app_error::AppError;
 use crate::resolver::staff_payload_resolver::StaffPayloadResolver;
@@ -38,9 +41,10 @@ pub fn routes() -> Router<AppState> {
 }
 
 async fn create_staff_invitation_handler(
-    AuthenticatedContext(ctx): AuthenticatedContext,
+    authorized_ctx: AuthorizedContext<StaffInvitePermission>,
     Json(payload): Json<CreateStaffInvitation>,
 ) -> Result<ApiResponse<StaffInvitationResponse>, AppError> {
+    let ctx = authorized_ctx.into_service_context();
     let organization_id = ctx.get_organization_id()?;
     let resolved_payload = StaffPayloadResolver::resolve_create_staff_invitation(
         &ctx.app_state.primary_read_replica,
@@ -69,9 +73,10 @@ async fn accept_staff_invitation_handler(
 }
 
 async fn resend_staff_invitation_handler(
-    AuthenticatedContext(ctx): AuthenticatedContext,
+    authorized_ctx: AuthorizedContext<StaffInvitationResendPermission>,
     Json(payload): Json<ResendStaffInvitation>,
 ) -> Result<ApiResponse<StaffInvitationResponse>, AppError> {
+    let ctx = authorized_ctx.into_service_context();
     let organization_id = ctx.get_organization_id()?;
     let invitation_model = StaffPayloadResolver::resolve_resend_staff_invitation(
         &ctx.app_state.primary_read_replica,
@@ -88,9 +93,10 @@ async fn resend_staff_invitation_handler(
 }
 
 async fn revoke_staff_invitation_handler(
-    AuthenticatedContext(ctx): AuthenticatedContext,
+    authorized_ctx: AuthorizedContext<StaffInvitationRevokePermission>,
     Json(payload): Json<RevokeStaffInvitation>,
 ) -> Result<ApiResponse<String>, AppError> {
+    let ctx = authorized_ctx.into_service_context();
     let organization_id = ctx.get_organization_id()?;
     let invitation_model = StaffPayloadResolver::resolve_revoke_staff_invitation(
         &ctx.app_state.primary_read_replica,

@@ -1,5 +1,5 @@
-use crate::api::AuthenticatedContext;
 use crate::api::api_response::ApiResponse;
+use crate::api::{AuthorizedContext, BranchCreatePermission};
 use crate::app_state::AppState;
 use crate::errors::app_error::AppError;
 use crate::service::branch_service::{BranchService, CreateBranch};
@@ -12,9 +12,10 @@ pub fn routes() -> Router<AppState> {
 }
 
 async fn create_branch_handler(
-    AuthenticatedContext(ctx): AuthenticatedContext,
+    authorized_ctx: AuthorizedContext<BranchCreatePermission>,
     Json(payload): Json<CreateBranch>,
 ) -> Result<ApiResponse<String>, AppError> {
+    let ctx = authorized_ctx.into_service_context();
     let public_id = BranchService::create_branch(&ctx, payload).await?;
     Ok(ApiResponse::success(
         public_id,

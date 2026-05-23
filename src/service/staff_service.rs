@@ -32,7 +32,7 @@ pub struct CreateStaffInvitation {
     pub invitee_email: String,
     pub invitee_first_name: String,
     pub invitee_last_name: String,
-    pub invited_role: Option<String>,
+    pub role_public_id: String,
     pub branch_public_ids: Option<Vec<String>>,
 }
 
@@ -156,7 +156,7 @@ impl StaffService {
             invitee_email: Set(payload.invitee_email.trim().to_lowercase()),
             invitee_first_name: Set(payload.invitee_first_name),
             invitee_last_name: Set(payload.invitee_last_name),
-            invited_role: Set(payload.invited_role),
+            invited_role_id: Set(payload.invited_role_id),
             invitation_token_hash: Set(token_bundle.token_hash),
             invitation_token_id: Set(token_bundle.token_id),
             token_expires_at: Set(token_bundle.token_expires_at),
@@ -311,6 +311,7 @@ impl StaffService {
         ctx: &ServiceContext,
         organization_id: OrganizationPrimaryId,
         branch_ids: &[BranchPrimaryId],
+        role_id: i32,
     ) -> Result<(), AppError> {
         let actor_id = ctx.get_actor_id()?;
         let user_id = ctx.get_user_id()?;
@@ -327,6 +328,7 @@ impl StaffService {
             public_id: Set(public_id),
             name_primary: Set(format!("{} {}", user.first_name, user.last_name)),
             name_secondary: Set(None),
+            role_id: Set(role_id),
             is_default_organization: Set(is_default_organization),
             status: Set(StaffStatus::Active),
             created_by_actor_id: Set(actor_id),
@@ -584,6 +586,7 @@ impl StaffService {
                 invitation.invitee_first_name, invitation.invitee_last_name
             )),
             name_secondary: Set(None),
+            role_id: Set(invitation.invited_role_id),
             is_default_organization: Set(is_default_organization),
             status: Set(StaffStatus::Active),
             created_by_actor_id: Set(invitation.created_by_actor_id),

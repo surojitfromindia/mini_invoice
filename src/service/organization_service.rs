@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::entity::{ActorPrimaryId, PublicId};
 use crate::errors::organization_service_errors::OrgServiceError;
 use crate::service::branch_service::BranchService;
+use crate::service::staff_role_service::StaffRoleService;
 use crate::service::staff_service::StaffService;
 use crate::{
     entity::{
@@ -95,6 +96,12 @@ impl OrganizationService {
         // create organization meta data.
         Self::create_organization_meta(&txn, actor_id, created_organization.id, meta_payload)
             .await?;
+        let default_roles = StaffRoleService::create_default_roles_for_organization(
+            &txn,
+            actor_id,
+            created_organization.id,
+        )
+        .await?;
         // Every organization starts with a primary branch so downstream staff flows
         // always have a valid default branch to attach people to.
         let default_branch = BranchService::create_branch_for_organization(
@@ -112,6 +119,7 @@ impl OrganizationService {
             &ctx,
             created_organization.id,
             &[default_branch.id],
+            default_roles.owner_role_id,
         )
         .await?;
 

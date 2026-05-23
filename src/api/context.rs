@@ -2,7 +2,9 @@ use crate::app_state::AppState;
 use crate::errors::app_error::AppError;
 use crate::errors::staff_service_errors::StaffServiceError;
 use crate::resolver::auth_resolver::AuthResolver;
-use crate::service::service_context::{AuthContext, RequestContext, ServiceContext};
+use crate::service::service_context::{
+    AuthContext, OrganizationStaffAccess, RequestContext, ServiceContext,
+};
 use crate::utils::jwt_helpers::JwtHelpers;
 use axum::extract::FromRequestParts;
 use axum::http::header::HeaderMap;
@@ -69,9 +71,11 @@ impl FromRequestParts<AppState> for AuthenticatedContext {
             // get user actor.
             let user_actor =
                 AuthResolver::resolve_user_actor(&state.primary_read_replica, &public_id).await?;
-            let organization_id = match (user_actor.user_id, claims.organization_public_id) {
+            // Resolve the organization-scoped staff membership during authentication
+            // so downstream handlers can enforce RBAC without repeating lookups.
+            let organization_staff = match (user_actor.user_id, claims.organization_public_id) {
                 (Some(user_id), Some(organization_public_id)) => {
-                    let membership = AuthResolver::resolve_user_organization(
+                    let membership = AuthResolver::resolve_user_organization_membership(
                         &state.primary_read_replica,
                         user_id,
                         &organization_public_id,
@@ -81,10 +85,19 @@ impl FromRequestParts<AppState> for AuthenticatedContext {
                         AppError::Staff(StaffServiceError::NotFound) => AppError::Unauthorized,
                         other => other,
                     })?;
-                    Some(membership.id)
+                    Some(OrganizationStaffAccess {
+                        staff_id: membership.staff.id,
+                        organization_id: membership.staff.organization_id,
+                        role_id: membership.role.id,
+                        role_public_id: membership.role.public_id,
+                        permission_codes: membership.permission_codes,
+                    })
                 }
                 _ => None,
             };
+            let organization_id = organization_staff
+                .as_ref()
+                .map(|staff| staff.organization_id);
 
             // build auth context
             let auth_context = AuthContext {
@@ -92,6 +105,7 @@ impl FromRequestParts<AppState> for AuthenticatedContext {
                 user_id: user_actor.user_id,
                 client_app_id: None,
                 organization_id,
+                organization_staff,
             };
 
             // build service context.

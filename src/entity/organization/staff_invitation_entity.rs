@@ -30,7 +30,7 @@ pub struct Model {
     pub invitee_email: String,
     pub invitee_first_name: String,
     pub invitee_last_name: String,
-    pub invited_role: Option<String>,
+    pub invited_role_id: i32,
     pub invitation_token_hash: String,
     #[sea_orm(unique)]
     pub invitation_token_id: String,

@@ -17,6 +17,7 @@ pub enum AppError {
     Org(OrgServiceError),
     Staff(StaffServiceError),
     Unauthorized,
+    Forbidden { permission: &'static str },
     Database(DbErr),
     InternalServer(String),
     ActorIdNotFound,
@@ -37,6 +38,11 @@ impl AppError {
                 code: "000.000.0002",
                 message: "Not authorized".into(),
                 http_code: HttpErrorCode::Unauthorized,
+            },
+            AppError::Forbidden { permission } => ErrorMeta {
+                code: "000.000.0003",
+                message: format!("Missing permission: {permission}"),
+                http_code: HttpErrorCode::Forbidden,
             },
             AppError::InvalidCredentials => ErrorMeta {
                 code: "000.000.0001",
@@ -73,6 +79,7 @@ pub enum HttpErrorCode {
     Conflict,
     InternalServerError,
     Unauthorized,
+    Forbidden,
 }
 impl HttpErrorCode {
     pub fn as_status(&self) -> axum::http::StatusCode {
@@ -84,6 +91,8 @@ impl HttpErrorCode {
             Self::Conflict => StatusCode::CONFLICT,
 
             Self::Unauthorized => StatusCode::UNAUTHORIZED,
+
+            Self::Forbidden => StatusCode::FORBIDDEN,
 
             Self::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
         }
