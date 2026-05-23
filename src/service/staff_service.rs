@@ -1,7 +1,5 @@
 use crate::entity::organization::organization_entity as Organization;
-use crate::entity::{
-    BranchPrimaryId, OrganizationPrimaryId, PublicId, StaffPrimaryId, UserPrimaryId,
-};
+use crate::entity::{BranchPrimaryId, OrganizationPrimaryId, StaffPrimaryId, UserPrimaryId};
 use crate::errors::app_error::AppError;
 use crate::errors::staff_service_errors::StaffServiceError;
 use crate::resolver::staff_payload_resolver::ResolvedCreateStaffInvitation;
@@ -66,30 +64,6 @@ struct InvitationTokenBundle {
 }
 
 impl StaffService {
-    pub async fn get_staff_by_public_id(
-        db_transaction: &impl ConnectionTrait,
-        public_id: &PublicId,
-    ) -> Result<Staff::Model, AppError> {
-        let staff = Staff::Entity::find()
-            .filter(Staff::COLUMN.public_id.eq(public_id.clone()))
-            .one(db_transaction)
-            .await?
-            .ok_or(StaffServiceError::NotFound)?;
-        Ok(staff)
-    }
-
-    pub async fn get_staff_invitation_by_public_id(
-        db_transaction: &impl ConnectionTrait,
-        public_id: &PublicId,
-    ) -> Result<StaffInvitation::Model, AppError> {
-        let invitation = StaffInvitation::Entity::find()
-            .filter(StaffInvitation::COLUMN.public_id.eq(public_id.clone()))
-            .one(db_transaction)
-            .await?
-            .ok_or(StaffServiceError::InvitationNotFound)?;
-        Ok(invitation)
-    }
-
     pub async fn get_default_organization_for_user(
         ctx: &ServiceContext,
         user_id: UserPrimaryId,
@@ -448,17 +422,6 @@ impl StaffService {
             token_hash,
             token_expires_at,
         })
-    }
-
-    async fn find_invitation_for_organization(
-        ctx: &ServiceContext,
-        invitation_public_id: &str,
-    ) -> Result<StaffInvitation::Model, AppError> {
-        Self::get_staff_invitation_by_public_id(
-            &ctx.app_state.primary_read_replica,
-            &invitation_public_id.to_string(),
-        )
-        .await
     }
 
     async fn get_valid_invitation_from_token(

@@ -1,11 +1,10 @@
-use sea_orm::{ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter, Set};
+use sea_orm::{ActiveModelTrait, ConnectionTrait, Set};
 use serde::Deserialize;
 
 use crate::auth::permission::{Permission, normalize_permission_codes, serialize_permission_codes};
 use crate::entity::organization::staff_role_entity as StaffRole;
 use crate::entity::{ActorPrimaryId, OrganizationPrimaryId, PublicId};
 use crate::errors::app_error::AppError;
-use crate::errors::staff_service_errors::StaffServiceError;
 use crate::service::service_context::ServiceContext;
 use crate::utils::date_helpers::DateHelper;
 use crate::utils::id_generator::IdGenerator;
@@ -110,19 +109,6 @@ impl StaffRoleService {
         Ok(DefaultOrganizationRoles {
             owner_role_id: owner_role.id,
         })
-    }
-
-    pub async fn get_role_by_public_id_for_organization(
-        db_transaction: &impl ConnectionTrait,
-        organization_id: OrganizationPrimaryId,
-        role_public_id: &str,
-    ) -> Result<StaffRole::Model, AppError> {
-        StaffRole::Entity::find()
-            .filter(StaffRole::Column::OrganizationId.eq(organization_id))
-            .filter(StaffRole::Column::PublicId.eq(role_public_id))
-            .one(db_transaction)
-            .await?
-            .ok_or(StaffServiceError::RoleNotFound.into())
     }
 
     async fn create_role(

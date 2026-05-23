@@ -5,7 +5,7 @@ use crate::entity::organization::{
     staff_entity::{self as Staff, StaffStatus},
     staff_role_entity as StaffRole,
 };
-use crate::entity::{OrganizationPrimaryId, PublicId, UserPrimaryId};
+use crate::entity::{OrganizationPrimaryId, UserPrimaryId};
 use crate::errors::app_error::AppError;
 use crate::errors::staff_service_errors::StaffServiceError;
 
@@ -21,7 +21,7 @@ pub struct ResolvedStaffAccess {
 impl AuthResolver {
     pub async fn resolve_user_actor(
         db_transaction: &impl ConnectionTrait,
-        user_public_id: &PublicId,
+        user_public_id: &str,
     ) -> Result<crate::entity::actor_entity::Model, AppError> {
         PublicIdResolver::user_actor(db_transaction, user_public_id).await
     }

@@ -45,7 +45,7 @@ async fn create_staff_invitation_handler(
     let ctx = authorized_ctx.require_any([Permission::StaffInvite])?;
     let organization_id = ctx.get_organization_id()?;
     let resolved_payload = StaffPayloadResolver::resolve_create_staff_invitation(
-        &ctx.app_state.primary_read_replica,
+        &ctx.app_state.primary_write_replica,
         organization_id,
         payload,
     )
@@ -77,7 +77,7 @@ async fn resend_staff_invitation_handler(
     let ctx = authorized_ctx.require_permission(Permission::StaffInvitationResend)?;
     let organization_id = ctx.get_organization_id()?;
     let invitation_model = StaffPayloadResolver::resolve_resend_staff_invitation(
-        &ctx.app_state.primary_read_replica,
+        &ctx.app_state.primary_write_replica,
         organization_id,
         payload,
     )
@@ -97,7 +97,7 @@ async fn revoke_staff_invitation_handler(
     let ctx = authorized_ctx.require_permission(Permission::StaffInvitationRevoke)?;
     let organization_id = ctx.get_organization_id()?;
     let invitation_model = StaffPayloadResolver::resolve_revoke_staff_invitation(
-        &ctx.app_state.primary_read_replica,
+        &ctx.app_state.primary_write_replica,
         organization_id,
         payload,
     )
