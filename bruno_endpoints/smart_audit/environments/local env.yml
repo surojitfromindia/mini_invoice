@@ -4,7 +4,7 @@ variables:
     value: http://127.0.0.1:8080
   - name: base_url_api_v1
     value: http://127.0.0.1:8080/api/v1
-  - secret: true
-    name: access_token
-  - secret: true
-    name: refresh_token
+  - name: access_token
+    value: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJwdWJsaWNfaWQiOiI3OEEyMjc2RUE2OTYiLCJvcmdhbml6YXRpb25fcHVibGljX2lkIjpudWxsLCJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzc5NTE5NzA3LCJpYXQiOjE3Nzk1MTg4MDd9.7YxFjhvykYtVcQkMQQ4fiU4j5tz9nPNULwffV8iUzsM
+  - name: refresh_token
+    value: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJwdWJsaWNfaWQiOiI3OEEyMjc2RUE2OTYiLCJvcmdhbml6YXRpb25fcHVibGljX2lkIjpudWxsLCJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImp0aSI6IjJHUGJ0RzM5am1tb2tHVmswLTlfeiIsImV4cCI6MTc4MjExMTIzOSwiaWF0IjoxNzc5NTE5MjM5fQ.ugt0WYilMpk5O5qwViQyfLNrWbvvrIB3sqBxmLMR75I

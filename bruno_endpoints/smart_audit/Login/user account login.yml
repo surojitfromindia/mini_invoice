@@ -21,8 +21,9 @@ runtime:
       code: |-
         let response_body = res.getBody();
         let access_token = response_body.data.access_token;
+        let refresh_token = response_body.data.refresh_token
         bru.setEnvVar("access_token", access_token)
-        bru.setEnvVar("refresh_token", access_token)
+        bru.setEnvVar("refresh_token", refresh_token)
 
 settings:
   encodeUrl: true

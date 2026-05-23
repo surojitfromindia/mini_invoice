@@ -2,10 +2,11 @@ use crate::app_state::AppState;
 use crate::errors::app_error::AppError;
 use crate::errors::staff_service_errors::StaffServiceError;
 use crate::service::actor_service::ActorService;
-use crate::service::service_context::{AuthContext, ServiceContext};
+use crate::service::service_context::{AuthContext, RequestContext, ServiceContext};
 use crate::service::staff_service::StaffService;
 use crate::utils::jwt_helpers::JwtHelpers;
 use axum::extract::FromRequestParts;
+use axum::http::header::HeaderMap;
 use axum::http::request::Parts;
 
 pub struct PublicContext(pub ServiceContext);
@@ -26,6 +27,23 @@ impl FromRequestParts<AppState> for PublicContext {
 }
 
 pub struct AuthenticatedContext(pub ServiceContext);
+
+fn get_request_timezone(headers: &HeaderMap) -> String {
+    headers
+        .get("x-timezone")
+        .or_else(|| headers.get("x-request-timezone"))
+        .or_else(|| headers.get("timezone"))
+        .and_then(|value| value.to_str().ok())
+        .filter(|value| !value.trim().is_empty())
+        .map(|value| value.to_owned())
+        .unwrap_or_else(|| "UTC".to_owned())
+}
+
+fn build_request_context(headers: &HeaderMap) -> RequestContext {
+    RequestContext {
+        request_timezone: get_request_timezone(headers),
+    }
+}
 
 impl FromRequestParts<AppState> for AuthenticatedContext {
     type Rejection = AppError;
@@ -80,6 +98,8 @@ impl FromRequestParts<AppState> for AuthenticatedContext {
             // build service context.
             let mut ctx = ServiceContext::from_app_state(state);
             ctx.set_auth(auth_context);
+            ctx.set_request_context(build_request_context(&headers));
+
             Ok(AuthenticatedContext(ctx))
         }
     }
