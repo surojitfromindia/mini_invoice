@@ -23,13 +23,6 @@ pub struct PagePaginationQuery {
     pub per_page: u64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-#[serde(untagged)]
-enum OneOrMany<T> {
-    One(T),
-    Many(Vec<T>),
-}
-
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 struct PagePaginationQueryRaw {

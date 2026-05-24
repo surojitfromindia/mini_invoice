@@ -39,7 +39,7 @@ async fn list_branches_page_handler(
     Query(query): Query<BranchListPageQueryDto>,
 ) -> Result<ApiResponse<PageListResult<BranchListItemResponseDto>>, AppError> {
     let ctx = authorized_ctx.into_context();
-    println!("query: {:?}", query);
+    dbg!("query: {:?}", &query);
     let result = BranchService::list_branches_page(&ctx, query.into_service_input()).await?;
     Ok(ApiResponse::success(
         BranchListItemResponseDto::page_from_service_output(result),
