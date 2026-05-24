@@ -3,16 +3,16 @@ use crate::api::api_response::ApiResponse;
 use crate::api::dto::branch_dto::{
     BranchListItemResponseDto, BranchListPageQueryDto, CreateBranchRequestDto,
 };
-use crate::api::dto::common_dto::PublicIdResponse;
+use crate::api::dto::common_dto::{IntoServiceInput, PublicIdResponse};
 use crate::app_state::AppState;
 use crate::auth::permission::Permission;
 use crate::db::listing::PageListResult;
 use crate::errors::app_error::AppError;
 use crate::service::branch_service::BranchService;
-use axum::extract::Query;
 use axum::http::StatusCode;
 use axum::routing::post;
 use axum::{Json, Router};
+use axum_extra::extract::Query;
 
 pub fn routes() -> Router<AppState> {
     Router::new().route(
@@ -39,6 +39,7 @@ async fn list_branches_page_handler(
     Query(query): Query<BranchListPageQueryDto>,
 ) -> Result<ApiResponse<PageListResult<BranchListItemResponseDto>>, AppError> {
     let ctx = authorized_ctx.into_context();
+    println!("query: {:?}", query);
     let result = BranchService::list_branches_page(&ctx, query.into_service_input()).await?;
     Ok(ApiResponse::success(
         BranchListItemResponseDto::page_from_service_output(result),

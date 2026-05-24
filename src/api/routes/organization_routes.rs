@@ -1,6 +1,6 @@
 use crate::api::AuthenticatedContext;
 use crate::api::api_response::ApiResponse;
-use crate::api::dto::common_dto::PublicIdResponse;
+use crate::api::dto::common_dto::{IntoServiceInput, PublicIdResponse};
 use crate::api::dto::organization_dto::CreateOrganizationRequestDto;
 use crate::app_state::AppState;
 use crate::errors::app_error::AppError;

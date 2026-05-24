@@ -1,6 +1,6 @@
 use crate::api::AuthorizedContext;
 use crate::api::api_response::ApiResponse;
-use crate::api::dto::common_dto::PublicIdResponse;
+use crate::api::dto::common_dto::{IntoServiceInput, PublicIdResponse};
 use crate::api::dto::staff_role_dto::CreateStaffRoleRequestDto;
 use crate::app_state::AppState;
 use crate::auth::permission::Permission;

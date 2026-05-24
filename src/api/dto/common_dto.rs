@@ -1,4 +1,8 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
+
+pub trait IntoServiceInput<T> {
+    fn into_service_input(self) -> T;
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -25,6 +29,7 @@ enum OneOrMany<T> {
     One(T),
     Many(Vec<T>),
 }
+
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 struct PagePaginationQueryRaw {
@@ -67,20 +72,6 @@ const fn default_page_value() -> U64Value {
 
 const fn default_per_page_value() -> U64Value {
     U64Value::Number(20)
-}
-
-pub fn deserialize_optional_one_or_many<'de, D, T>(
-    deserializer: D,
-) -> Result<Option<Vec<T>>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-    T: Deserialize<'de>,
-{
-    let value = Option::<OneOrMany<T>>::deserialize(deserializer)?;
-    Ok(value.map(|value| match value {
-        OneOrMany::One(item) => vec![item],
-        OneOrMany::Many(items) => items,
-    }))
 }
 
 #[cfg(test)]
@@ -127,40 +118,5 @@ mod tests {
         let json = serde_json::to_value(response).unwrap();
 
         assert_eq!(json, serde_json::json!({ "publicId": "pub_123" }));
-    }
-
-    #[test]
-    fn deserialize_optional_one_or_many_accepts_single_value() {
-        #[derive(Debug, Deserialize, PartialEq, Eq)]
-        struct Payload {
-            #[serde(deserialize_with = "deserialize_optional_one_or_many")]
-            items: Option<Vec<String>>,
-        }
-
-        let payload: Payload = serde_json::from_value(serde_json::json!({
-            "items": "one"
-        }))
-        .unwrap();
-
-        assert_eq!(payload.items, Some(vec!["one".to_string()]));
-    }
-
-    #[test]
-    fn deserialize_optional_one_or_many_accepts_array() {
-        #[derive(Debug, Deserialize, PartialEq, Eq)]
-        struct Payload {
-            #[serde(deserialize_with = "deserialize_optional_one_or_many")]
-            items: Option<Vec<String>>,
-        }
-
-        let payload: Payload = serde_json::from_value(serde_json::json!({
-            "items": ["one", "two"]
-        }))
-        .unwrap();
-
-        assert_eq!(
-            payload.items,
-            Some(vec!["one".to_string(), "two".to_string()])
-        );
     }
 }

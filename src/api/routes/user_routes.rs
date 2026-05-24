@@ -1,5 +1,6 @@
 use crate::api::PublicContext;
 use crate::api::api_response::ApiResponse;
+use crate::api::dto::common_dto::IntoServiceInput;
 use crate::api::dto::user_dto::{CreateUserAccountRequestDto, UserAccountCreatedResponseDto};
 use crate::app_state::AppState;
 use crate::errors::app_error::AppError;

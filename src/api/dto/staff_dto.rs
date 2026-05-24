@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use super::common_dto::IntoServiceInput;
 use crate::service::staff_service::{
     AcceptStaffInvitationInput, CreateStaffInvitationInput, ResendStaffInvitationInput,
     RevokeStaffInvitationInput, StaffInvitationCreated,
@@ -15,8 +16,8 @@ pub struct CreateStaffInvitationRequestDto {
     pub branch_public_ids: Option<Vec<String>>,
 }
 
-impl CreateStaffInvitationRequestDto {
-    pub fn into_service_input(self) -> CreateStaffInvitationInput {
+impl IntoServiceInput<CreateStaffInvitationInput> for CreateStaffInvitationRequestDto {
+    fn into_service_input(self) -> CreateStaffInvitationInput {
         CreateStaffInvitationInput {
             invitee_email: self.invitee_email,
             invitee_first_name: self.invitee_first_name,
@@ -33,8 +34,8 @@ pub struct AcceptStaffInvitationRequestDto {
     pub password: String,
 }
 
-impl AcceptStaffInvitationRequestDto {
-    pub fn into_service_input(self) -> AcceptStaffInvitationInput {
+impl IntoServiceInput<AcceptStaffInvitationInput> for AcceptStaffInvitationRequestDto {
+    fn into_service_input(self) -> AcceptStaffInvitationInput {
         AcceptStaffInvitationInput {
             invitation_token: self.invitation_token,
             password: self.password,
@@ -47,8 +48,8 @@ pub struct ResendStaffInvitationRequestDto {
     pub invitation_id: String,
 }
 
-impl ResendStaffInvitationRequestDto {
-    pub fn into_service_input(self) -> ResendStaffInvitationInput {
+impl IntoServiceInput<ResendStaffInvitationInput> for ResendStaffInvitationRequestDto {
+    fn into_service_input(self) -> ResendStaffInvitationInput {
         ResendStaffInvitationInput {
             invitation_id: self.invitation_id,
         }
@@ -60,8 +61,8 @@ pub struct RevokeStaffInvitationRequestDto {
     pub invitation_id: String,
 }
 
-impl RevokeStaffInvitationRequestDto {
-    pub fn into_service_input(self) -> RevokeStaffInvitationInput {
+impl IntoServiceInput<RevokeStaffInvitationInput> for RevokeStaffInvitationRequestDto {
+    fn into_service_input(self) -> RevokeStaffInvitationInput {
         RevokeStaffInvitationInput {
             invitation_id: self.invitation_id,
         }

@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+use super::common_dto::IntoServiceInput;
 use crate::service::user_service::CreateUserAccountInput;
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -10,8 +11,8 @@ pub struct CreateUserAccountRequestDto {
     pub password: String,
 }
 
-impl CreateUserAccountRequestDto {
-    pub fn into_service_input(self) -> CreateUserAccountInput {
+impl IntoServiceInput<CreateUserAccountInput> for CreateUserAccountRequestDto {
+    fn into_service_input(self) -> CreateUserAccountInput {
         CreateUserAccountInput {
             first_name: self.first_name,
             last_name: self.last_name,

@@ -1,5 +1,6 @@
 use serde::Deserialize;
 
+use super::common_dto::IntoServiceInput;
 use crate::service::organization_service::CreateOrganizationInput;
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -10,8 +11,8 @@ pub struct CreateOrganizationRequestDto {
     pub currency_iso_code: String,
 }
 
-impl CreateOrganizationRequestDto {
-    pub fn into_service_input(self) -> CreateOrganizationInput {
+impl IntoServiceInput<CreateOrganizationInput> for CreateOrganizationRequestDto {
+    fn into_service_input(self) -> CreateOrganizationInput {
         CreateOrganizationInput {
             name_primary: self.name_primary,
             name_secondary: self.name_secondary,

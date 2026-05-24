@@ -1,5 +1,5 @@
 use crate::api::api_response::ApiResponse;
-use crate::api::dto::common_dto::ActionStatusResponse;
+use crate::api::dto::common_dto::{ActionStatusResponse, IntoServiceInput};
 use crate::api::dto::staff_dto::{
     AcceptStaffInvitationRequestDto, CreateStaffInvitationRequestDto,
     ResendStaffInvitationRequestDto, RevokeStaffInvitationRequestDto, StaffInvitationResponseDto,

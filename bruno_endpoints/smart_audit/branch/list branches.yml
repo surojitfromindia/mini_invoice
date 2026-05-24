@@ -5,7 +5,7 @@ info:
 
 http:
   method: GET
-  url: "{{base_url_api_v1}}/branch?page=1&per_page=20&sort=created_at&direction=desc"
+  url: "{{base_url_api_v1}}/branch?page=1&per_page=20&sort=created_at&direction=desc&ids=1&ids=2"
   params:
     - name: page
       value: "1"
@@ -18,6 +18,12 @@ http:
       type: query
     - name: direction
       value: desc
+      type: query
+    - name: ids
+      value: "1"
+      type: query
+    - name: ids
+      value: "2"
       type: query
   auth: inherit
 

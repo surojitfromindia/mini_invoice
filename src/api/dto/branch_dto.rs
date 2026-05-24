@@ -1,7 +1,7 @@
 use sea_orm::FromQueryResult;
 use serde::{Deserialize, Serialize};
 
-use super::common_dto::{PagePaginationQuery, deserialize_optional_one_or_many};
+use super::common_dto::{IntoServiceInput, PagePaginationQuery};
 use crate::db::listing::PageListResult;
 use crate::service::branch_service::{
     BranchInclude, BranchListItem, BranchListPageInput, BranchSortField, CreateBranchInput,
@@ -15,8 +15,8 @@ pub struct CreateBranchRequestDto {
     pub is_primary: Option<bool>,
 }
 
-impl CreateBranchRequestDto {
-    pub fn into_service_input(self) -> CreateBranchInput {
+impl IntoServiceInput<CreateBranchInput> for CreateBranchRequestDto {
+    fn into_service_input(self) -> CreateBranchInput {
         CreateBranchInput {
             name_primary: self.name_primary,
             name_secondary: self.name_secondary,
@@ -53,12 +53,12 @@ pub struct BranchListPageQueryDto {
     pub is_primary: Option<bool>,
     pub sort: Option<BranchSortFieldDto>,
     pub direction: Option<SortDirectionDto>,
-    #[serde(default, deserialize_with = "deserialize_optional_one_or_many")]
+    #[serde(default)]
     pub include: Option<Vec<BranchIncludeDto>>,
 }
 
-impl BranchListPageQueryDto {
-    pub fn into_service_input(self) -> BranchListPageInput {
+impl IntoServiceInput<BranchListPageInput> for BranchListPageQueryDto {
+    fn into_service_input(self) -> BranchListPageInput {
         BranchListPageInput {
             page: self.pagination.page,
             per_page: self.pagination.per_page,

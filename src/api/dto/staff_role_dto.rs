@@ -1,5 +1,6 @@
 use serde::Deserialize;
 
+use super::common_dto::IntoServiceInput;
 use crate::service::staff_role_service::CreateStaffRoleInput;
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -9,8 +10,8 @@ pub struct CreateStaffRoleRequestDto {
     pub permission_codes: Vec<String>,
 }
 
-impl CreateStaffRoleRequestDto {
-    pub fn into_service_input(self) -> CreateStaffRoleInput {
+impl IntoServiceInput<CreateStaffRoleInput> for CreateStaffRoleRequestDto {
+    fn into_service_input(self) -> CreateStaffRoleInput {
         CreateStaffRoleInput {
             name_primary: self.name_primary,
             name_secondary: self.name_secondary,

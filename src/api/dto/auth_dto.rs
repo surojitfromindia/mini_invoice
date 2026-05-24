@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+use super::common_dto::IntoServiceInput;
 use crate::service::auth_service::AuthTokens;
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -8,8 +9,8 @@ pub struct LoginRequestDto {
     pub password: String,
 }
 
-impl LoginRequestDto {
-    pub fn into_service_input(self) -> (String, String) {
+impl IntoServiceInput<(String, String)> for LoginRequestDto {
+    fn into_service_input(self) -> (String, String) {
         (self.email, self.password)
     }
 }
@@ -19,8 +20,8 @@ pub struct RefreshTokenRequestDto {
     pub refresh_token: String,
 }
 
-impl RefreshTokenRequestDto {
-    pub fn into_service_input(self) -> String {
+impl IntoServiceInput<String> for RefreshTokenRequestDto {
+    fn into_service_input(self) -> String {
         self.refresh_token
     }
 }
