@@ -6,10 +6,12 @@ use crate::entity::staff::staff_invitation_branch_entity as StaffInvitationBranc
 use crate::entity::staff::staff_invitation_entity::{
     self as StaffInvitation, StaffInvitationStatus,
 };
-use crate::entity::{BranchPrimaryId, OrganizationPrimaryId, StaffPrimaryId, UserPrimaryId};
+use crate::entity::{
+    BranchPrimaryId, OrganizationPrimaryId, StaffInvitationPrimaryId, StaffPrimaryId,
+    StaffRolePrimaryId, UserPrimaryId,
+};
 use crate::errors::app_error::AppError;
 use crate::errors::staff_service_errors::StaffServiceError;
-use crate::resolver::staff_payload_resolver::ResolvedCreateStaffInvitation;
 use crate::service::service_context::ServiceContext;
 use crate::service::user_credential_service::UserCredentialService;
 use crate::service::user_service::UserService;
@@ -28,21 +30,13 @@ pub struct CreateStaffInvitationInput {
     pub invitee_email: String,
     pub invitee_first_name: String,
     pub invitee_last_name: String,
-    pub role_public_id: String,
-    pub branch_public_ids: Option<Vec<String>>,
+    pub invited_role_id: StaffRolePrimaryId,
+    pub branch_ids: Vec<BranchPrimaryId>,
 }
 
 pub struct AcceptStaffInvitationInput {
     pub invitation_token: String,
     pub password: String,
-}
-
-pub struct ResendStaffInvitationInput {
-    pub invitation_id: String,
-}
-
-pub struct RevokeStaffInvitationInput {
-    pub invitation_id: String,
 }
 
 pub struct StaffInvitationCreated {
@@ -110,7 +104,7 @@ impl StaffService {
 
     pub async fn create_staff_invitation(
         ctx: &ServiceContext,
-        payload: ResolvedCreateStaffInvitation,
+        payload: CreateStaffInvitationInput,
     ) -> Result<StaffInvitationCreated, AppError> {
         let actor_id = ctx.get_actor_id()?;
         let organization_id = ctx.get_organization_id()?;
@@ -201,9 +195,12 @@ impl StaffService {
 
     pub async fn resend_staff_invitation(
         ctx: &ServiceContext,
-        invitation: StaffInvitation::Model,
+        invitation_id: StaffInvitationPrimaryId,
     ) -> Result<StaffInvitationCreated, AppError> {
         let actor_id = ctx.get_actor_id()?;
+        let invitation =
+            Self::staff_invitation_by_id(&ctx.app_state.primary_write_replica, invitation_id)
+                .await?;
 
         if invitation.status != StaffInvitationStatus::Pending {
             return Err(StaffServiceError::InvitationAlreadyUsed.into());
@@ -246,9 +243,12 @@ impl StaffService {
 
     pub async fn revoke_staff_invitation(
         ctx: &ServiceContext,
-        invitation: StaffInvitation::Model,
+        invitation_id: StaffInvitationPrimaryId,
     ) -> Result<(), AppError> {
         let actor_id = ctx.get_actor_id()?;
+        let invitation =
+            Self::staff_invitation_by_id(&ctx.app_state.primary_write_replica, invitation_id)
+                .await?;
 
         if invitation.status != StaffInvitationStatus::Pending {
             return Err(StaffServiceError::InvitationAlreadyUsed.into());
@@ -280,7 +280,7 @@ impl StaffService {
         ctx: &ServiceContext,
         organization_id: OrganizationPrimaryId,
         branch_ids: &[BranchPrimaryId],
-        role_id: i32,
+        role_id: StaffRolePrimaryId,
     ) -> Result<(), AppError> {
         let actor_id = ctx.get_actor_id()?;
         let user_id = ctx.get_user_id()?;
@@ -319,7 +319,7 @@ impl StaffService {
     async fn attach_invitation_to_branches(
         db_transaction: &impl ConnectionTrait,
         actor_id: i32,
-        invitation_id: i32,
+        invitation_id: StaffInvitationPrimaryId,
         branch_ids: &[BranchPrimaryId],
     ) -> Result<(), AppError> {
         let now = DateHelper::now().value();
@@ -496,7 +496,7 @@ impl StaffService {
 
     async fn get_invitation_branch_ids(
         db_transaction: &impl ConnectionTrait,
-        invitation_id: i32,
+        invitation_id: StaffInvitationPrimaryId,
     ) -> Result<Vec<BranchPrimaryId>, AppError> {
         Ok(StaffInvitationBranch::Entity::find()
             .filter(StaffInvitationBranch::Column::StaffInvitationId.eq(invitation_id))
@@ -575,7 +575,7 @@ impl StaffService {
 
     async fn revoke_other_pending_invitations(
         db_transaction: &impl ConnectionTrait,
-        accepted_invitation_id: i32,
+        accepted_invitation_id: StaffInvitationPrimaryId,
         organization_id: OrganizationPrimaryId,
         invitee_email: &str,
         now: chrono::DateTime<chrono::Utc>,
@@ -604,5 +604,15 @@ impl StaffService {
             .exec(db_transaction)
             .await?;
         Ok(())
+    }
+
+    async fn staff_invitation_by_id(
+        db_transaction: &impl ConnectionTrait,
+        invitation_id: StaffInvitationPrimaryId,
+    ) -> Result<StaffInvitation::Model, AppError> {
+        StaffInvitation::Entity::find_by_id(invitation_id)
+            .one(db_transaction)
+            .await?
+            .ok_or(StaffServiceError::InvitationNotFound.into())
     }
 }

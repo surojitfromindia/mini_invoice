@@ -12,10 +12,12 @@ pub type BranchPrimaryId = i32;
 
 pub type UnitPrimaryId = i32;
 
-pub type ItemPrimaryId = i32;
+pub type UnitConversionPrimaryId = i32;
 
-pub type ItemUnitPrimaryId = i32;
+pub type ItemPrimaryId = i32;
 
 pub type StaffPrimaryId = i32;
 
 pub type StaffInvitationPrimaryId = i32;
+
+pub type StaffRolePrimaryId = i32;

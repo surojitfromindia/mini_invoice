@@ -1,4 +1,4 @@
-use crate::entity::{ActorPrimaryId, OrganizationPrimaryId, PublicId};
+use crate::entity::{ActorPrimaryId, OrganizationPrimaryId, PublicId, StaffRolePrimaryId};
 use sea_orm::entity::prelude::*;
 
 #[sea_orm::model]
@@ -6,7 +6,7 @@ use sea_orm::entity::prelude::*;
 #[sea_orm(table_name = "staff_roles")]
 pub struct Model {
     #[sea_orm(primary_key)]
-    pub id: i32,
+    pub id: StaffRolePrimaryId,
     pub organization_id: OrganizationPrimaryId,
     #[sea_orm(unique)]
     pub public_id: PublicId,

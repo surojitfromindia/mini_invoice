@@ -33,6 +33,8 @@ pub struct Model {
     pub description: Option<String>,
     pub item_type: ItemType,
     pub base_unit_id: UnitPrimaryId,
+    pub purchase_unit_id: UnitPrimaryId,
+    pub sales_unit_id: UnitPrimaryId,
     pub default_purchase_price: Decimal,
     pub default_sales_price: Decimal,
     pub track_inventory: bool,

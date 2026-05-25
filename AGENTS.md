@@ -21,6 +21,13 @@ Database migration are done automatically  by sea orm entity, no script need.
 ## Entity structure
 If a entity span with multiple related entity, create separate folder for those.
 
+## Item and unit conventions
+- Service layer should work with internal database ids, not public ids.
+- Resolve public ids to database ids in resolver layer before calling services.
+- `organization_items` stores `base_unit_id`, `purchase_unit_id`, and `sales_unit_id` directly on the item.
+- Do not reintroduce an `item_units` join table for item base/purchase/sales unit selection.
+- Unit conversion should live in a dedicated item-scoped conversion table, because conversions such as `BOX -> PCS` can vary by item.
+- Service layer should not own request validation. Keep validation for a dedicated validation layer or edge/resolver layer.
 
 ## Code comment
 add comment around primary module and complex code flow.

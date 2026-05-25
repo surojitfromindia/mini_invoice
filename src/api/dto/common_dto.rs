@@ -23,7 +23,6 @@ pub struct PagePaginationQuery {
     pub per_page: u64,
 }
 
-
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 struct PagePaginationQueryRaw {
     #[serde(default = "default_page_value")]

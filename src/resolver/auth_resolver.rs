@@ -9,8 +9,6 @@ use crate::entity::{OrganizationPrimaryId, UserPrimaryId};
 use crate::errors::app_error::AppError;
 use crate::errors::staff_service_errors::StaffServiceError;
 
-use super::public_id_resolver::PublicIdResolver;
-
 pub struct AuthResolver;
 pub struct ResolvedStaffAccess {
     pub staff: Staff::Model,
@@ -19,24 +17,7 @@ pub struct ResolvedStaffAccess {
 }
 
 impl AuthResolver {
-    pub async fn resolve_user_actor(
-        db_transaction: &impl ConnectionTrait,
-        user_public_id: &str,
-    ) -> Result<crate::entity::actor_entity::Model, AppError> {
-        PublicIdResolver::user_actor(db_transaction, user_public_id).await
-    }
-
-    pub async fn resolve_user_organization_membership(
-        db_transaction: &impl ConnectionTrait,
-        user_id: UserPrimaryId,
-        organization_public_id: &str,
-    ) -> Result<ResolvedStaffAccess, AppError> {
-        let organization =
-            PublicIdResolver::organization(db_transaction, organization_public_id).await?;
-        Self::resolve_staff_membership_by_ids(db_transaction, user_id, organization.id).await
-    }
-
-    pub async fn resolve_staff_membership_by_ids(
+    pub async fn staff_access(
         db_transaction: &impl ConnectionTrait,
         user_id: UserPrimaryId,
         organization_id: OrganizationPrimaryId,

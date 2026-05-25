@@ -2,7 +2,8 @@ use std::collections::HashSet;
 
 use crate::app_state::AppState;
 use crate::entity::{
-    ActorPrimaryId, ClientAppPrimaryId, OrganizationPrimaryId, StaffPrimaryId, UserPrimaryId,
+    ActorPrimaryId, ClientAppPrimaryId, OrganizationPrimaryId, StaffPrimaryId, StaffRolePrimaryId,
+    UserPrimaryId,
 };
 use crate::errors::app_error::AppError;
 #[derive(Clone)]
@@ -79,7 +80,7 @@ pub struct AuthContext {
 pub struct OrganizationStaffAccess {
     pub staff_id: StaffPrimaryId,
     pub organization_id: OrganizationPrimaryId,
-    pub role_id: i32,
+    pub role_id: StaffRolePrimaryId,
     pub role_public_id: String,
     pub permission_codes: Vec<String>,
     pub permission_code_set: HashSet<String>,

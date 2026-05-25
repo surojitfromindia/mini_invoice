@@ -8,7 +8,10 @@ use crate::api::{AuthorizedContext, PublicContext};
 use crate::app_state::AppState;
 use crate::auth::permission::Permission;
 use crate::errors::app_error::AppError;
-use crate::resolver::staff_payload_resolver::StaffPayloadResolver;
+use crate::resolver::public_id_resolver::PublicIdResolver;
+use crate::resolver::staff_payload_resolver::{
+    CreateStaffInvitationResolutionInput, StaffPayloadResolver,
+};
 use crate::service::staff_service::StaffService;
 use axum::http::StatusCode;
 use axum::routing::post;
@@ -28,10 +31,16 @@ async fn create_staff_invitation_handler(
 ) -> Result<ApiResponse<StaffInvitationResponseDto>, AppError> {
     let ctx = authorized_ctx.require_any([Permission::StaffInvite])?;
     let organization_id = ctx.get_organization_id()?;
-    let resolved_payload = StaffPayloadResolver::resolve_create_staff_invitation(
+    let resolved_payload = StaffPayloadResolver::create_staff_invitation(
         &ctx.app_state.primary_write_replica,
         organization_id,
-        payload.into_service_input(),
+        CreateStaffInvitationResolutionInput {
+            invitee_email: payload.invitee_email,
+            invitee_first_name: payload.invitee_first_name,
+            invitee_last_name: payload.invitee_last_name,
+            role_public_id: payload.role_public_id,
+            branch_public_ids: payload.branch_public_ids,
+        },
     )
     .await?;
     let invitation = StaffService::create_staff_invitation(&ctx, resolved_payload).await?;
@@ -62,13 +71,13 @@ async fn resend_staff_invitation_handler(
 ) -> Result<ApiResponse<StaffInvitationResponseDto>, AppError> {
     let ctx = authorized_ctx.require_permission(Permission::StaffInvitationResend)?;
     let organization_id = ctx.get_organization_id()?;
-    let invitation_model = StaffPayloadResolver::resolve_resend_staff_invitation(
+    let invitation_id = PublicIdResolver::staff_invitation_id(
         &ctx.app_state.primary_write_replica,
         organization_id,
-        payload.into_service_input(),
+        &payload.invitation_id,
     )
     .await?;
-    let invitation = StaffService::resend_staff_invitation(&ctx, invitation_model).await?;
+    let invitation = StaffService::resend_staff_invitation(&ctx, invitation_id).await?;
     Ok(ApiResponse::success(
         StaffInvitationResponseDto::from_service_output(invitation),
         "Staff invitation resent",
@@ -82,13 +91,13 @@ async fn revoke_staff_invitation_handler(
 ) -> Result<ApiResponse<ActionStatusResponse>, AppError> {
     let ctx = authorized_ctx.require_permission(Permission::StaffInvitationRevoke)?;
     let organization_id = ctx.get_organization_id()?;
-    let invitation_model = StaffPayloadResolver::resolve_revoke_staff_invitation(
+    let invitation_id = PublicIdResolver::staff_invitation_id(
         &ctx.app_state.primary_write_replica,
         organization_id,
-        payload.into_service_input(),
+        &payload.invitation_id,
     )
     .await?;
-    StaffService::revoke_staff_invitation(&ctx, invitation_model).await?;
+    StaffService::revoke_staff_invitation(&ctx, invitation_id).await?;
     Ok(ApiResponse::success(
         ActionStatusResponse {
             status: "invitation_revoked".to_string(),

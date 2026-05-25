@@ -39,12 +39,9 @@ pub const STAFF_INVALID_PERMISSION: &str = "103.000.0007";
 
 // Item domain
 pub const ITEM_UNIT_NOT_FOUND: &str = "104.000.0001";
-pub const ITEM_UNIT_CONFIGURATION_REQUIRED: &str = "104.000.0002";
-pub const ITEM_DUPLICATE_UNIT_CONFIGURATION: &str = "104.000.0003";
-pub const ITEM_INVALID_BASE_UNIT_CONFIGURATION: &str = "104.000.0004";
-pub const ITEM_INVALID_UNIT_CONVERSION_FACTOR: &str = "104.000.0005";
-pub const ITEM_INVALID_SKU: &str = "104.000.0006";
-pub const ITEM_INVALID_NAME: &str = "104.000.0007";
+pub const ITEM_REQUIRED_UNIT: &str = "104.000.0002";
+pub const ITEM_INVALID_SKU: &str = "104.000.0003";
+pub const ITEM_INVALID_NAME: &str = "104.000.0004";
 
 // Database and unexpected internal failures
 pub const LISTING_INVALID_PAGINATION: &str = "105.000.0001";

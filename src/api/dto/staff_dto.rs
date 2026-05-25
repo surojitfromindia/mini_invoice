@@ -2,10 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::common_dto::IntoServiceInput;
-use crate::service::staff_service::{
-    AcceptStaffInvitationInput, CreateStaffInvitationInput, ResendStaffInvitationInput,
-    RevokeStaffInvitationInput, StaffInvitationCreated,
-};
+use crate::service::staff_service::{AcceptStaffInvitationInput, StaffInvitationCreated};
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct CreateStaffInvitationRequestDto {
@@ -14,18 +11,6 @@ pub struct CreateStaffInvitationRequestDto {
     pub invitee_last_name: String,
     pub role_public_id: String,
     pub branch_public_ids: Option<Vec<String>>,
-}
-
-impl IntoServiceInput<CreateStaffInvitationInput> for CreateStaffInvitationRequestDto {
-    fn into_service_input(self) -> CreateStaffInvitationInput {
-        CreateStaffInvitationInput {
-            invitee_email: self.invitee_email,
-            invitee_first_name: self.invitee_first_name,
-            invitee_last_name: self.invitee_last_name,
-            role_public_id: self.role_public_id,
-            branch_public_ids: self.branch_public_ids,
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -48,25 +33,9 @@ pub struct ResendStaffInvitationRequestDto {
     pub invitation_id: String,
 }
 
-impl IntoServiceInput<ResendStaffInvitationInput> for ResendStaffInvitationRequestDto {
-    fn into_service_input(self) -> ResendStaffInvitationInput {
-        ResendStaffInvitationInput {
-            invitation_id: self.invitation_id,
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct RevokeStaffInvitationRequestDto {
     pub invitation_id: String,
-}
-
-impl IntoServiceInput<RevokeStaffInvitationInput> for RevokeStaffInvitationRequestDto {
-    fn into_service_input(self) -> RevokeStaffInvitationInput {
-        RevokeStaffInvitationInput {
-            invitation_id: self.invitation_id,
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

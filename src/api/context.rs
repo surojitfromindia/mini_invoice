@@ -1,9 +1,11 @@
 use crate::app_state::AppState;
 use crate::auth::permission::build_permission_code_set;
+use crate::entity::actor_entity as Actor;
 use crate::errors::app_error::AppError;
 use crate::errors::staff_service_errors::StaffServiceError;
 use crate::resolver::auth_resolver::AuthResolver;
 use crate::resolver::auth_resolver::ResolvedStaffAccess;
+use crate::resolver::public_id_resolver::PublicIdResolver;
 use crate::service::service_context::{
     AuthContext, OrganizationStaffAccess, RequestContext, ServiceContext,
 };
@@ -11,6 +13,7 @@ use crate::utils::jwt_helpers::JwtHelpers;
 use axum::extract::FromRequestParts;
 use axum::http::header::HeaderMap;
 use axum::http::request::Parts;
+use sea_orm::EntityTrait;
 
 pub struct PublicContext(pub ServiceContext);
 
@@ -71,16 +74,25 @@ impl FromRequestParts<AppState> for AuthenticatedContext {
             let public_id = claims.public_id;
 
             // get user actor.
-            let user_actor =
-                AuthResolver::resolve_user_actor(&state.primary_read_replica, &public_id).await?;
+            let actor_id =
+                PublicIdResolver::actor_id(&state.primary_read_replica, &public_id).await?;
+            let user_id = Actor::Entity::find_by_id(actor_id)
+                .one(&state.primary_read_replica)
+                .await?
+                .and_then(|actor| actor.user_id);
             // Resolve the organization-scoped staff membership during authentication
             // so downstream handlers can enforce RBAC without repeating lookups.
-            let organization_staff = match (user_actor.user_id, claims.organization_public_id) {
+            let organization_staff = match (user_id, claims.organization_public_id) {
                 (Some(user_id), Some(organization_public_id)) => {
-                    let membership = AuthResolver::resolve_user_organization_membership(
+                    let organization_id = PublicIdResolver::organization_id(
+                        &state.primary_read_replica,
+                        &organization_public_id,
+                    )
+                    .await?;
+                    let membership = AuthResolver::staff_access(
                         &state.primary_read_replica,
                         user_id,
-                        &organization_public_id,
+                        organization_id,
                     )
                     .await
                     .map_err(|error| match error {
@@ -111,8 +123,8 @@ impl FromRequestParts<AppState> for AuthenticatedContext {
 
             // build auth context
             let auth_context = AuthContext {
-                actor_id: user_actor.id,
-                user_id: user_actor.user_id,
+                actor_id,
+                user_id,
                 client_app_id: None,
                 organization_id,
                 organization_staff,
