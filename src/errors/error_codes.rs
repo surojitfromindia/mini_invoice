@@ -37,8 +37,17 @@ pub const STAFF_INVITATION_ALREADY_USED: &str = "103.000.0005";
 pub const STAFF_ROLE_NOT_FOUND: &str = "103.000.0006";
 pub const STAFF_INVALID_PERMISSION: &str = "103.000.0007";
 
+// Item domain
+pub const ITEM_UNIT_NOT_FOUND: &str = "104.000.0001";
+pub const ITEM_UNIT_CONFIGURATION_REQUIRED: &str = "104.000.0002";
+pub const ITEM_DUPLICATE_UNIT_CONFIGURATION: &str = "104.000.0003";
+pub const ITEM_INVALID_BASE_UNIT_CONFIGURATION: &str = "104.000.0004";
+pub const ITEM_INVALID_UNIT_CONVERSION_FACTOR: &str = "104.000.0005";
+pub const ITEM_INVALID_SKU: &str = "104.000.0006";
+pub const ITEM_INVALID_NAME: &str = "104.000.0007";
+
 // Database and unexpected internal failures
-pub const LISTING_INVALID_PAGINATION: &str = "104.000.0001";
+pub const LISTING_INVALID_PAGINATION: &str = "105.000.0001";
 pub const DATABASE_DUPLICATE_RECORD: &str = "900.001.0001";
 pub const DATABASE_OPERATION_FAILED: &str = "900.001.0002";
 pub const INTERNAL_SERVER_ERROR: &str = "900.000.0001";

@@ -1,6 +1,7 @@
 use sea_orm::{ActiveModelTrait, ConnectionTrait, Set, TransactionTrait};
 
 use crate::entity::{ActorPrimaryId, PublicId};
+use crate::service::item_service::ItemService;
 use crate::service::branch_service::BranchService;
 use crate::service::staff_role_service::StaffRoleService;
 use crate::service::staff_service::StaffService;
@@ -88,6 +89,8 @@ impl OrganizationService {
             true,
         )
         .await?;
+        ItemService::seed_default_units_for_organization(&txn, actor_id, created_organization.id)
+            .await?;
         // register this user as organization staff
         StaffService::create_staff_from_user(
             &txn,

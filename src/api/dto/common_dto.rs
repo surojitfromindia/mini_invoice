@@ -1,4 +1,4 @@
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 
 pub trait IntoServiceInput<T> {
     fn into_service_input(self) -> T;

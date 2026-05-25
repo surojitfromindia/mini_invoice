@@ -34,11 +34,6 @@ pub enum SortDirection {
     Desc,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum BranchInclude {
-    Organization,
-}
-
 pub struct BranchListPageInput {
     pub page: u64,
     pub per_page: u64,
@@ -46,7 +41,6 @@ pub struct BranchListPageInput {
     pub is_primary: Option<bool>,
     pub sort: Option<BranchSortField>,
     pub direction: Option<SortDirection>,
-    pub include: Vec<BranchInclude>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, FromQueryResult)]

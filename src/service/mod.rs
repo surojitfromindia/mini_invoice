@@ -1,6 +1,7 @@
 pub mod actor_service;
 pub mod auth_service;
 pub mod branch_service;
+pub mod item_service;
 mod login_log_service;
 pub mod organization_service;
 pub mod service_context;

@@ -1,6 +1,7 @@
 use crate::errors::error_codes;
 use crate::errors::error_meta::{ErrorMeta, ErrorMetadata};
 use crate::errors::internal_error_messages;
+use crate::errors::item_service_errors::ItemServiceError;
 use crate::errors::jwt_errors::JwtError;
 use crate::errors::organization_service_errors::OrgServiceError;
 use crate::errors::staff_service_errors::StaffServiceError;
@@ -16,6 +17,7 @@ pub enum AppError {
     UserCredential(UserCredentialServiceError),
     InvalidCredentials,
     Jwt(JwtError),
+    Item(ItemServiceError),
     Org(OrgServiceError),
     Staff(StaffServiceError),
     Unauthorized,
@@ -34,6 +36,7 @@ impl AppError {
             AppError::User(data) => data.meta(),
             AppError::UserCredential(data) => data.meta(),
             AppError::Jwt(data) => data.meta(),
+            AppError::Item(data) => data.meta(),
             AppError::Org(data) => data.meta(),
             AppError::Staff(data) => data.meta(),
             AppError::Database(data) => data.meta(),

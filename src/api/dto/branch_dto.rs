@@ -4,8 +4,7 @@ use serde::{Deserialize, Serialize};
 use super::common_dto::{IntoServiceInput, PagePaginationQuery};
 use crate::db::listing::PageListResult;
 use crate::service::branch_service::{
-    BranchInclude, BranchListItem, BranchListPageInput, BranchSortField, CreateBranchInput,
-    SortDirection,
+    BranchListItem, BranchListPageInput, BranchSortField, CreateBranchInput, SortDirection,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -40,12 +39,6 @@ pub enum SortDirectionDto {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum BranchIncludeDto {
-    Organization,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct BranchListPageQueryDto {
     #[serde(flatten)]
     pub pagination: PagePaginationQuery,
@@ -53,8 +46,6 @@ pub struct BranchListPageQueryDto {
     pub is_primary: Option<bool>,
     pub sort: Option<BranchSortFieldDto>,
     pub direction: Option<SortDirectionDto>,
-    #[serde(default)]
-    pub include: Option<Vec<BranchIncludeDto>>,
 }
 
 impl IntoServiceInput<BranchListPageInput> for BranchListPageQueryDto {
@@ -72,14 +63,6 @@ impl IntoServiceInput<BranchListPageInput> for BranchListPageQueryDto {
                 SortDirectionDto::Asc => SortDirection::Asc,
                 SortDirectionDto::Desc => SortDirection::Desc,
             }),
-            include: self
-                .include
-                .unwrap_or_default()
-                .into_iter()
-                .map(|include| match include {
-                    BranchIncludeDto::Organization => BranchInclude::Organization,
-                })
-                .collect(),
         }
     }
 }
@@ -137,26 +120,22 @@ mod tests {
     }
 
     #[test]
-    fn branch_list_page_query_accepts_single_include_value() {
+    fn branch_list_page_query_deserializes_filters_and_sort() {
         let query: BranchListPageQueryDto = serde_json::from_value(serde_json::json!({
             "page": 1,
             "per_page": 20,
-            "include": "organization"
+            "name": "HQ",
+            "is_primary": true,
+            "sort": "name_primary",
+            "direction": "asc"
         }))
         .unwrap();
 
-        assert_eq!(query.include, Some(vec![BranchIncludeDto::Organization]));
-    }
-
-    #[test]
-    fn branch_list_page_query_accepts_include_array() {
-        let query: BranchListPageQueryDto = serde_json::from_value(serde_json::json!({
-            "page": 1,
-            "per_page": 20,
-            "include": ["organization"]
-        }))
-        .unwrap();
-
-        assert_eq!(query.include, Some(vec![BranchIncludeDto::Organization]));
+        assert_eq!(query.pagination.page, 1);
+        assert_eq!(query.pagination.per_page, 20);
+        assert_eq!(query.name.as_deref(), Some("HQ"));
+        assert_eq!(query.is_primary, Some(true));
+        assert_eq!(query.sort, Some(BranchSortFieldDto::NamePrimary));
+        assert_eq!(query.direction, Some(SortDirectionDto::Asc));
     }
 }
