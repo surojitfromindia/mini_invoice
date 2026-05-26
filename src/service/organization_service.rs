@@ -41,6 +41,8 @@ impl From<&CreateOrganizationInput> for CreateOrganizationMeta {
 pub struct OrganizationService;
 
 impl OrganizationService {
+    // Create the organization record first, then hand off all default
+    // organization bootstrapping to dedicated helpers inside the same transaction.
     pub async fn create_organization(
         ctx: &ServiceContext,
         payload: CreateOrganizationInput,
@@ -72,40 +74,56 @@ impl OrganizationService {
         // create organization meta data.
         Self::create_organization_meta(&txn, actor_id, created_organization.id, meta_payload)
             .await?;
-        let default_roles = StaffRoleService::create_default_roles_for_organization(
-            &txn,
-            actor_id,
-            created_organization.id,
-        )
-        .await?;
-        // Every organization starts with a primary branch so downstream staff flows
-        // always have a valid default branch to attach people to.
-        let default_branch = BranchService::create_branch_for_organization(
-            &txn,
-            actor_id,
-            created_organization.id,
-            "Head Office".to_string(),
-            None,
-            true,
-        )
-        .await?;
-        UnitService::seed_default_units_for_organization(&txn, actor_id, created_organization.id)
-            .await?;
-        // register this user as organization staff
-        StaffService::create_staff_from_user(
-            &txn,
-            &ctx,
-            created_organization.id,
-            &[default_branch.id],
-            default_roles.owner_role_id,
-        )
-        .await?;
+        Self::seed_organization_defaults(&txn, ctx, actor_id, created_organization.id).await?;
 
         txn.commit().await?;
 
         Ok(created_organization.public_id)
     }
 
+    // Seed the minimum organization data required for staff, branch, role,
+    // and item flows to work immediately after organization creation.
+    async fn seed_organization_defaults(
+        db_transaction: &impl ConnectionTrait,
+        ctx: &ServiceContext,
+        actor_id: ActorPrimaryId,
+        organization_id: OrganizationPrimaryId,
+    ) -> Result<(), AppError> {
+        let default_roles =
+            StaffRoleService::create_default_roles_for_organization(
+                db_transaction,
+                actor_id,
+                organization_id,
+            )
+            .await?;
+        // Every organization starts with a primary branch so downstream staff flows
+        // always have a valid default branch to attach people to.
+        let default_branch = BranchService::create_branch_for_organization(
+            db_transaction,
+            actor_id,
+            organization_id,
+            "Head Office".to_string(),
+            None,
+            true,
+        )
+        .await?;
+        UnitService::seed_default_units_for_organization(db_transaction, actor_id, organization_id)
+            .await?;
+        // register this user as organization staff
+        StaffService::create_staff_from_user(
+            db_transaction,
+            ctx,
+            organization_id,
+            &[default_branch.id],
+            default_roles.owner_role_id,
+        )
+        .await?;
+
+        Ok(())
+    }
+
+    // Persist organization-scoped metadata separately so the main organization
+    // row stays focused on identity while defaults can evolve independently.
     async fn create_organization_meta(
         db_transaction: &impl ConnectionTrait,
         actor_id: ActorPrimaryId,

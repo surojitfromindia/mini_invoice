@@ -18,3 +18,11 @@ variables:
     value: ""
   - name: branch_public_id
     value: ""
+  - name: item_base_unit_public_id
+    value: ""
+  - name: item_purchase_unit_public_id
+    value: ""
+  - name: item_sales_unit_public_id
+    value: ""
+  - name: item_public_id
+    value: ""

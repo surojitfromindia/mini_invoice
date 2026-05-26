@@ -1,0 +1,43 @@
+info:
+  name: create item
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{base_url_api_v1}}/item"
+  body:
+    type: json
+    data: |-
+      {
+        "sku": "ITEM-001",
+        "barcode": "8901234567890",
+        "name_primary": "Milk 1L",
+        "name_secondary": "Full Cream",
+        "description": "Seeded sample item",
+        "item_type": "inventory",
+        "base_unit_public_id": "{{item_base_unit_public_id}}",
+        "purchase_unit_public_id": "{{item_purchase_unit_public_id}}",
+        "sales_unit_public_id": "{{item_sales_unit_public_id}}",
+        "default_purchase_price": "45.00",
+        "default_sales_price": "52.00",
+        "track_inventory": true,
+        "allow_negative_stock": false,
+        "reorder_level": "10.00",
+        "is_active": true
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        let response_body = res.getBody();
+        let item_public_id = response_body?.data?.public_id;
+        bru.setEnvVar("item_public_id", item_public_id)
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
