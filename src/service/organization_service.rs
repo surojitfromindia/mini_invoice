@@ -1,19 +1,18 @@
 use sea_orm::{ActiveModelTrait, ConnectionTrait, Set, TransactionTrait};
 
-use crate::entity::{ActorPrimaryId, PublicId};
-use crate::service::branch_service::BranchService;
-use crate::service::staff_role_service::StaffRoleService;
-use crate::service::staff_service::StaffService;
-use crate::service::unit_service::UnitService;
 use crate::{
     entity::{
-        OrganizationPrimaryId,
+        ActorPrimaryId, OrganizationPrimaryId, PublicId,
         organization::{
             organization_entity as Organization, organization_meta_entity as OrganizationMeta,
         },
     },
     errors::app_error::AppError,
+    service::branch_service::BranchService,
     service::service_context::ServiceContext,
+    service::staff_role_service::StaffRoleService,
+    service::staff_service::StaffService,
+    service::unit_service::UnitService,
     utils::{date_helpers::DateHelper, id_generator::IdGenerator},
 };
 
@@ -89,13 +88,12 @@ impl OrganizationService {
         actor_id: ActorPrimaryId,
         organization_id: OrganizationPrimaryId,
     ) -> Result<(), AppError> {
-        let default_roles =
-            StaffRoleService::create_default_roles_for_organization(
-                db_transaction,
-                actor_id,
-                organization_id,
-            )
-            .await?;
+        let default_roles = StaffRoleService::create_default_roles_for_organization(
+            db_transaction,
+            actor_id,
+            organization_id,
+        )
+        .await?;
         // Every organization starts with a primary branch so downstream staff flows
         // always have a valid default branch to attach people to.
         let default_branch = BranchService::create_branch_for_organization(

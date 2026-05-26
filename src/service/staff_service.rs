@@ -1,3 +1,4 @@
+use crate::config::settings::Settings;
 use crate::entity::organization::organization_entity as Organization;
 use crate::entity::organization::organization_entity::OrganizationModel;
 use crate::entity::staff::staff_branch_entity as StaffBranch;
@@ -6,6 +7,7 @@ use crate::entity::staff::staff_invitation_branch_entity as StaffInvitationBranc
 use crate::entity::staff::staff_invitation_entity::{
     self as StaffInvitation, StaffInvitationStatus,
 };
+use crate::entity::user_entity::UserModel;
 use crate::entity::{
     BranchPrimaryId, OrganizationPrimaryId, StaffInvitationPrimaryId, StaffPrimaryId,
     StaffRolePrimaryId, UserPrimaryId,
@@ -469,7 +471,7 @@ impl StaffService {
     async fn get_or_create_invited_user(
         db_transaction: &impl ConnectionTrait,
         invitation: &StaffInvitation::Model,
-    ) -> Result<crate::entity::user_entity::Model, AppError> {
+    ) -> Result<UserModel, AppError> {
         UserService::get_or_create_user_without_password(
             db_transaction,
             invitation.invitee_first_name.clone(),
@@ -481,7 +483,7 @@ impl StaffService {
 
     async fn ensure_user_credential(
         db_transaction: &DatabaseTransaction,
-        settings: &crate::config::settings::Settings,
+        settings: &Settings,
         user_id: UserPrimaryId,
         password: &String,
     ) -> Result<(), AppError> {

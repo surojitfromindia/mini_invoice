@@ -27,10 +27,9 @@ impl ItemPayloadResolver {
         )
         .await?;
 
-        let [base_unit_id, purchase_unit_id, sales_unit_id]: [UnitPrimaryId; 3] =
-            unit_ids
-                .try_into()
-                .map_err(|_| AppError::InternalServer("Failed to resolve item units".into()))?;
+        let [base_unit_id, purchase_unit_id, sales_unit_id]: [UnitPrimaryId; 3] = unit_ids
+            .try_into()
+            .map_err(|_| AppError::InternalServer("Failed to resolve item units".into()))?;
 
         Ok(CreateItemInput {
             sku: payload.sku,

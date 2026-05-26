@@ -1,6 +1,6 @@
+use crate::entity::item::item_entity::ItemType;
 use sea_orm::entity::prelude::Decimal;
 use serde::Deserialize;
-use crate::entity::item::item_entity::ItemType;
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "snake_case")]
