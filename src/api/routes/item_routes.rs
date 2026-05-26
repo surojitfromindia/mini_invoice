@@ -1,17 +1,21 @@
 use crate::api::AuthenticatedContext;
 use crate::api::api_response::ApiResponse;
-use crate::api::dto::common_dto::PublicIdResponse;
-use crate::api::dto::item_dto::CreateItemRequestDto;
+use crate::api::dto::common_dto::{IntoServiceInput, PublicIdResponse};
+use crate::api::dto::item_dto::{
+    CreateItemRequestDto, ItemListItemResponseDto, ItemListPageQueryDto,
+};
 use crate::app_state::AppState;
+use crate::db::listing::PageListResult;
 use crate::errors::app_error::AppError;
 use crate::resolver::item_payload_resolver::ItemPayloadResolver;
 use crate::service::item_service::ItemService;
 use axum::http::StatusCode;
 use axum::routing::post;
 use axum::{Json, Router};
+use axum_extra::extract::Query;
 
 pub fn routes() -> Router<AppState> {
-    Router::new().route("/", post(create_item_handler))
+    Router::new().route("/", post(create_item_handler).get(list_items_page_handler))
 }
 
 async fn create_item_handler(
@@ -31,5 +35,18 @@ async fn create_item_handler(
         PublicIdResponse { public_id },
         "Item created",
         Some(StatusCode::CREATED),
+    ))
+}
+
+async fn list_items_page_handler(
+    AuthenticatedContext(ctx): AuthenticatedContext,
+    Query(query): Query<ItemListPageQueryDto>,
+) -> Result<ApiResponse<PageListResult<ItemListItemResponseDto>>, AppError> {
+    let result = ItemService::list_items_page(&ctx, query.into_service_input()).await?;
+
+    Ok(ApiResponse::success(
+        ItemListItemResponseDto::page_from_service_output(result),
+        "Items fetched",
+        Some(StatusCode::OK),
     ))
 }

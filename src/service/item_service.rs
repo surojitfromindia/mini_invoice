@@ -1,6 +1,11 @@
 use sea_orm::entity::prelude::Decimal;
-use sea_orm::{ActiveModelTrait, Set, TransactionTrait};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, EntityTrait, FromQueryResult, QueryFilter, QueryOrder,
+    QuerySelect, Set, TransactionTrait,
+};
 
+use crate::db::listing::PageListResult;
+use crate::db::listing::{execute_page_query, validate_page_pagination};
 use crate::entity::item::item_entity::{self as Item, ItemType};
 use crate::entity::{PublicId, UnitPrimaryId};
 use crate::errors::app_error::AppError;
@@ -24,6 +29,44 @@ pub struct CreateItemInput {
     pub allow_negative_stock: bool,
     pub reorder_level: Option<Decimal>,
     pub is_active: Option<bool>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ItemSortField {
+    CreatedAt,
+    NamePrimary,
+    Sku,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SortDirection {
+    Asc,
+    Desc,
+}
+
+pub struct ItemListPageInput {
+    pub page: u64,
+    pub per_page: u64,
+    pub name: Option<String>,
+    pub sku: Option<String>,
+    pub is_active: Option<bool>,
+    pub item_type: Option<ItemType>,
+    pub sort: Option<ItemSortField>,
+    pub direction: Option<SortDirection>,
+}
+
+#[derive(Debug, Clone, PartialEq, FromQueryResult)]
+pub struct ItemListItem {
+    pub public_id: String,
+    pub sku: String,
+    pub barcode: Option<String>,
+    pub name_primary: String,
+    pub name_secondary: Option<String>,
+    pub item_type: ItemType,
+    pub default_purchase_price: Decimal,
+    pub default_sales_price: Decimal,
+    pub track_inventory: bool,
+    pub is_active: bool,
 }
 
 pub struct ItemService;
@@ -69,5 +112,101 @@ impl ItemService {
         txn.commit().await?;
 
         Ok(item.public_id)
+    }
+
+    pub async fn list_items_page(
+        ctx: &ServiceContext,
+        input: ItemListPageInput,
+    ) -> Result<PageListResult<ItemListItem>, AppError> {
+        let pagination = validate_page_pagination(input.page, input.per_page)?;
+        let organization_id = ctx.get_organization_id()?;
+        let sort_field = input.sort.unwrap_or(ItemSortField::CreatedAt);
+        let sort_direction = input.direction.unwrap_or(SortDirection::Desc);
+
+        let query = Self::build_item_list_query(
+            organization_id,
+            input.name.as_deref(),
+            input.sku.as_deref(),
+            input.is_active,
+            input.item_type,
+        );
+        let query = Self::apply_page_sort(query, sort_field, sort_direction);
+        let query = Self::select_item_list_columns(query).into_model::<ItemListItem>();
+
+        execute_page_query(&ctx.app_state.primary_read_replica, query, pagination).await
+    }
+
+    fn build_item_list_query(
+        organization_id: i32,
+        name: Option<&str>,
+        sku: Option<&str>,
+        is_active: Option<bool>,
+        item_type: Option<ItemType>,
+    ) -> sea_orm::Select<Item::Entity> {
+        let mut query =
+            Item::Entity::find().filter(Item::Column::OrganizationId.eq(organization_id));
+
+        if let Some(name) = name.map(str::trim).filter(|value| !value.is_empty()) {
+            query = query.filter(Item::Column::NamePrimary.contains(name));
+        }
+
+        if let Some(sku) = sku.map(str::trim).filter(|value| !value.is_empty()) {
+            query = query.filter(Item::Column::Sku.contains(sku));
+        }
+
+        if let Some(is_active) = is_active {
+            query = query.filter(Item::Column::IsActive.eq(is_active));
+        }
+
+        if let Some(item_type) = item_type {
+            query = query.filter(Item::Column::ItemType.eq(item_type));
+        }
+
+        query
+    }
+
+    fn apply_page_sort(
+        query: sea_orm::Select<Item::Entity>,
+        sort_field: ItemSortField,
+        sort_direction: SortDirection,
+    ) -> sea_orm::Select<Item::Entity> {
+        match (sort_field, sort_direction) {
+            (ItemSortField::CreatedAt, SortDirection::Asc) => query
+                .order_by_asc(Item::Column::CreatedAt)
+                .order_by_asc(Item::Column::Id),
+            (ItemSortField::CreatedAt, SortDirection::Desc) => query
+                .order_by_desc(Item::Column::CreatedAt)
+                .order_by_desc(Item::Column::Id),
+            (ItemSortField::NamePrimary, SortDirection::Asc) => query
+                .order_by_asc(Item::Column::NamePrimary)
+                .order_by_asc(Item::Column::Id),
+            (ItemSortField::NamePrimary, SortDirection::Desc) => query
+                .order_by_desc(Item::Column::NamePrimary)
+                .order_by_desc(Item::Column::Id),
+            (ItemSortField::Sku, SortDirection::Asc) => query
+                .order_by_asc(Item::Column::Sku)
+                .order_by_asc(Item::Column::Id),
+            (ItemSortField::Sku, SortDirection::Desc) => query
+                .order_by_desc(Item::Column::Sku)
+                .order_by_desc(Item::Column::Id),
+        }
+    }
+
+    fn select_item_list_columns<Q>(query: Q) -> Q
+    where
+        Q: QuerySelect<QueryStatement = sea_orm::sea_query::SelectStatement>,
+    {
+        query
+            .select_only()
+            .column(Item::Column::PublicId)
+            .column(Item::Column::Sku)
+            .column(Item::Column::Barcode)
+            .column(Item::Column::NamePrimary)
+            .column(Item::Column::NameSecondary)
+            .column(Item::Column::ItemType)
+            .column(Item::Column::DefaultPurchasePrice)
+            .column(Item::Column::DefaultSalesPrice)
+            .column(Item::Column::TrackInventory)
+            .column(Item::Column::IsActive)
     }
 }
