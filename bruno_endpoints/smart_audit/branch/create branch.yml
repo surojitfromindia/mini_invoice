@@ -12,7 +12,7 @@ http:
       {
         "name_primary": "HQ",
         "name_secondary": "Main office",
-        "is_primary": true
+        "is_primary": false
       }
   auth: inherit
 

@@ -12,6 +12,7 @@ use crate::errors::app_error::AppError;
 use crate::service::service_context::ServiceContext;
 use crate::utils::date_helpers::DateHelper;
 use crate::utils::id_generator::IdGenerator;
+use crate::utils::misc_helpers::trim_and_filter_empty;
 
 pub struct CreateItemInput {
     pub sku: String,
@@ -146,11 +147,11 @@ impl ItemService {
         let mut query =
             Item::Entity::find().filter(Item::Column::OrganizationId.eq(organization_id));
 
-        if let Some(name) = name.map(str::trim).filter(|value| !value.is_empty()) {
+        if let Some(name) = trim_and_filter_empty(name) {
             query = query.filter(Item::Column::NamePrimary.contains(name));
         }
 
-        if let Some(sku) = sku.map(str::trim).filter(|value| !value.is_empty()) {
+        if let Some(sku) = trim_and_filter_empty(sku) {
             query = query.filter(Item::Column::Sku.contains(sku));
         }
 

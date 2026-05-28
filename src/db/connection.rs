@@ -11,7 +11,7 @@ pub async fn init_write_replica_db(db_url: &str) -> Result<DatabaseConnection, s
     let db_connection = Database::connect(db_options(db_url)).await?;
     db_connection.ping().await?;
     db_connection
-        .get_schema_registry("smart_audit::entity::*")
+        .get_schema_registry("mini_invoice::entity::*")
         .sync(&db_connection)
         .await?;
     Ok(db_connection)

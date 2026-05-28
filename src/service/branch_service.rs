@@ -15,6 +15,7 @@ use crate::errors::app_error::AppError;
 use crate::service::service_context::ServiceContext;
 use crate::utils::date_helpers::DateHelper;
 use crate::utils::id_generator::IdGenerator;
+use crate::utils::misc_helpers::trim_and_filter_empty;
 
 pub struct CreateBranchInput {
     pub name_primary: String,
@@ -205,7 +206,7 @@ impl BranchService {
         let mut query =
             Branch::Entity::find().filter(Branch::COLUMN.organization_id.eq(organization_id));
 
-        if let Some(name) = name.map(str::trim).filter(|value| !value.is_empty()) {
+        if let Some(name) = trim_and_filter_empty(name) {
             query = query.filter(Branch::COLUMN.name_primary.contains(name));
         }
 

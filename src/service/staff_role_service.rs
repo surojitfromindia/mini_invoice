@@ -42,13 +42,15 @@ impl StaffRoleService {
         Ok(role.public_id)
     }
 
-    pub async fn create_default_roles_for_organization(
+    pub async fn seed_default_roles(
         db_transaction: &impl ConnectionTrait,
         actor_id: ActorPrimaryId,
         organization_id: OrganizationPrimaryId,
     ) -> Result<DefaultOrganizationRoles, AppError> {
         // Bootstrap a standard role set per organization so authorization can
         // stay data-driven while new organizations still start in a usable state.
+
+        // owner with all permissions by default
         let owner_role = Self::create_role(
             db_transaction,
             actor_id,
@@ -60,13 +62,14 @@ impl StaffRoleService {
         )
         .await?;
 
+        // admin with selected permissions
         Self::create_role(
             db_transaction,
             actor_id,
             organization_id,
             "Admin".to_string(),
             None,
-            &vec![
+            &[
                 Permission::BranchCreate.code().to_string(),
                 Permission::StaffInvite.code().to_string(),
                 Permission::StaffInvitationResend.code().to_string(),
@@ -77,13 +80,14 @@ impl StaffRoleService {
         )
         .await?;
 
+        // manager.
         Self::create_role(
             db_transaction,
             actor_id,
             organization_id,
             "Manager".to_string(),
             None,
-            &vec![
+            &[
                 Permission::BranchCreate.code().to_string(),
                 Permission::StaffInvite.code().to_string(),
                 Permission::StaffInvitationResend.code().to_string(),

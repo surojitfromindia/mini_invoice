@@ -73,6 +73,7 @@ impl OrganizationService {
         // create organization meta data.
         Self::create_organization_meta(&txn, actor_id, created_organization.id, meta_payload)
             .await?;
+        // create organization related things lik creating default branch, items, units etc.
         Self::seed_organization_defaults(&txn, ctx, actor_id, created_organization.id).await?;
 
         txn.commit().await?;
@@ -88,12 +89,9 @@ impl OrganizationService {
         actor_id: ActorPrimaryId,
         organization_id: OrganizationPrimaryId,
     ) -> Result<(), AppError> {
-        let default_roles = StaffRoleService::create_default_roles_for_organization(
-            db_transaction,
-            actor_id,
-            organization_id,
-        )
-        .await?;
+        // create organization default roles.
+        let default_roles =
+            StaffRoleService::seed_default_roles(db_transaction, actor_id, organization_id).await?;
         // Every organization starts with a primary branch so downstream staff flows
         // always have a valid default branch to attach people to.
         let default_branch = BranchService::create_branch_for_organization(

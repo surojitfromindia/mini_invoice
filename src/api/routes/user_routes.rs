@@ -17,6 +17,7 @@ async fn create_account_handler(
     PublicContext(ctx): PublicContext,
     Json(payload): Json<CreateUserAccountRequestDto>,
 ) -> Result<ApiResponse<UserAccountCreatedResponseDto>, AppError> {
+    // register a new user with email and password.
     let email = UserService::create_user_account(&ctx, payload.into_service_input()).await?;
     Ok(ApiResponse::success(
         UserAccountCreatedResponseDto::from_service_output(email),
