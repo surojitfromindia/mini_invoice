@@ -1,7 +1,12 @@
+use crate::entity::organization::{
+    organization_entity as Organization, organization_meta_entity as OrganizationMeta,
+};
+use crate::entity::staff::staff_entity::{self as Staff, StaffStatus};
 use crate::entity::user_entity::{self as User, UserModel, UserStatus};
 
 use crate::entity::{PublicId, UserPrimaryId};
 use crate::errors::app_error::AppError;
+use crate::errors::organization_service_errors::OrgServiceError;
 use crate::errors::user_service_errors::UserServiceError;
 use crate::service::actor_service::ActorService;
 use crate::service::service_context::ServiceContext;
@@ -15,6 +20,21 @@ pub struct CreateUserAccountInput {
     pub last_name: String,
     pub email: String,
     pub password: String,
+}
+
+pub struct CurrentUserOrganization {
+    pub public_id: PublicId,
+    pub name_primary: String,
+    pub name_secondary: Option<String>,
+    pub country_iso_code: String,
+    pub currency_iso_code: String,
+}
+
+pub struct CurrentUserProfile {
+    pub email: String,
+    pub first_name: String,
+    pub last_name: String,
+    pub organization: Option<CurrentUserOrganization>,
 }
 
 pub struct UserService;
@@ -86,6 +106,54 @@ impl UserService {
             })
             .await?;
         Ok(email)
+    }
+
+    pub async fn get_current_user_profile(
+        ctx: &ServiceContext,
+    ) -> Result<CurrentUserProfile, AppError> {
+        let user_id = ctx.get_user_id()?;
+        let user = Self::get_user_by_id(ctx, user_id).await?;
+        let organization = Self::get_default_organization_profile(ctx, user_id).await?;
+
+        Ok(CurrentUserProfile {
+            email: user.email,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            organization,
+        })
+    }
+
+    async fn get_default_organization_profile(
+        ctx: &ServiceContext,
+        user_id: UserPrimaryId,
+    ) -> Result<Option<CurrentUserOrganization>, AppError> {
+        let staff = Staff::Entity::find()
+            .filter(Staff::COLUMN.user_id.eq(user_id))
+            .filter(Staff::COLUMN.status.eq(StaffStatus::Active))
+            .filter(Staff::COLUMN.is_default_organization.eq(true))
+            .one(&ctx.app_state.primary_read_replica)
+            .await?;
+
+        let Some(staff) = staff else {
+            return Ok(None);
+        };
+
+        let organization = Organization::Entity::find_by_id(staff.organization_id)
+            .one(&ctx.app_state.primary_read_replica)
+            .await?
+            .ok_or(OrgServiceError::NotFound)?;
+        let organization_meta = OrganizationMeta::Entity::find_by_id(organization.id)
+            .one(&ctx.app_state.primary_read_replica)
+            .await?
+            .ok_or(OrgServiceError::NotFound)?;
+
+        Ok(Some(CurrentUserOrganization {
+            public_id: organization.public_id,
+            name_primary: organization.name_primary,
+            name_secondary: organization.name_secondary,
+            country_iso_code: organization_meta.country_iso_code,
+            currency_iso_code: organization_meta.currency_iso_code,
+        }))
     }
 
     fn prepare_user(first_name: String, last_name: String, email: String) -> User::ActiveModel {
