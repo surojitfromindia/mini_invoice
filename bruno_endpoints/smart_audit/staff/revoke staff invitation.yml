@@ -10,7 +10,7 @@ http:
     type: json
     data: |-
       {
-        "invitation_id": "{{staff_invitation_id}}"
+        "invitationId": "{{staff_invitation_id}}"
       }
   auth: inherit
 

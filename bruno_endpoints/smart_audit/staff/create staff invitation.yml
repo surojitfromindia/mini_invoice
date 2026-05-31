@@ -10,10 +10,10 @@ http:
     type: json
     data: |-
       {
-        "invitee_email": "staff1@example.com",
-        "invitee_first_name": "Staff",
-        "invitee_last_name": "One",
-        "role_public_id": "{{staff_role_public_id}}"
+        "inviteeEmail": "staff1@example.com",
+        "inviteeFirstName": "Staff",
+        "inviteeLastName": "One",
+        "rolePublicId": "{{staff_role_public_id}}"
       }
   auth: inherit
 
@@ -22,8 +22,8 @@ runtime:
     - type: after-response
       code: |-
         let response_body = res.getBody();
-        let invitation_id = response_body?.data?.invitation_id;
-        let invitation_token = response_body?.data?.invitation_token;
+        let invitation_id = response_body?.data?.invitationId;
+        let invitation_token = response_body?.data?.invitationToken;
         bru.setEnvVar("staff_invitation_id", invitation_id)
         bru.setEnvVar("staff_invitation_token", invitation_token)
 

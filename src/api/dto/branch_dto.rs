@@ -8,6 +8,7 @@ use crate::service::branch_service::{
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateBranchRequestDto {
     pub name_primary: String,
     pub name_secondary: Option<String>,
@@ -25,20 +26,21 @@ impl IntoServiceInput<CreateBranchInput> for CreateBranchRequestDto {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "camelCase")]
 pub enum BranchSortFieldDto {
     CreatedAt,
     NamePrimary,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "camelCase")]
 pub enum SortDirectionDto {
     Asc,
     Desc,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BranchListPageQueryDto {
     #[serde(flatten)]
     pub pagination: PagePaginationQuery,
@@ -123,10 +125,10 @@ mod tests {
     fn branch_list_page_query_deserializes_filters_and_sort() {
         let query: BranchListPageQueryDto = serde_json::from_value(serde_json::json!({
             "page": 1,
-            "per_page": 20,
+            "perPage": 20,
             "name": "HQ",
-            "is_primary": true,
-            "sort": "name_primary",
+            "isPrimary": true,
+            "sort": "namePrimary",
             "direction": "asc"
         }))
         .unwrap();

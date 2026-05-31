@@ -10,9 +10,9 @@ http:
     type: json
     data: |-
       {
-        "name_primary": "Auditor",
-        "name_secondary": "Auditor",
-        "permission_codes": [
+        "namePrimary": "Auditor",
+        "nameSecondary": "Auditor",
+        "permissionCodes": [
           "staff.invite",
           "staff.invitation.resend"
         ]
@@ -24,7 +24,7 @@ runtime:
     - type: after-response
       code: |-
         let response_body = res.getBody();
-        let staff_role_public_id = response_body?.data?.public_id;
+        let staff_role_public_id = response_body?.data?.publicId;
         bru.setEnvVar("staff_role_public_id", staff_role_public_id)
 
 settings:

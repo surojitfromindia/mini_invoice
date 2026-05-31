@@ -46,8 +46,8 @@ When a staff role is created, the API payload sends:
 
 ```json
 {
-  "name_primary": "Manager",
-  "permission_codes": [
+  "namePrimary": "Manager",
+  "permissionCodes": [
     "branch.create",
     "staff.invite"
   ]

@@ -5,12 +5,12 @@ info:
 
 http:
   method: GET
-  url: "{{base_url_api_v1}}/branch?page=1&per_page=20"
+  url: "{{base_url_api_v1}}/branch?page=1&perPage=20"
   params:
     - name: page
       value: "1"
       type: query
-    - name: per_page
+    - name: perPage
       value: "20"
       type: query
   auth: inherit

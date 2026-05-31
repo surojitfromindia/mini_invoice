@@ -101,12 +101,12 @@ The common transport DTOs live in `src/api/dto/common_dto.rs`.
 `PagePaginationQuery`
 
 - `page`
-- `per_page`
+- `perPage`
 
 Defaults:
 
 - `page = 1`
-- `per_page = 20`
+- `perPage = 20`
 
 ### Shared list response shapes
 
@@ -118,11 +118,11 @@ Defaults:
 `PageMeta`
 
 - `page`
-- `per_page`
-- `total_rows`
-- `total_pages`
-- `has_next`
-- `has_prev`
+- `perPage`
+- `totalRows`
+- `totalPages`
+- `hasNext`
+- `hasPrev`
 
 ## Shared Listing Executor
 
@@ -185,12 +185,12 @@ The branch module defines its own typed list contract.
 ### Filters
 
 - `name`
-- `is_primary`
+- `isPrimary`
 
 ### Sort fields
 
-- `created_at`
-- `name_primary`
+- `createdAt`
+- `namePrimary`
 
 ### Sort direction
 
@@ -205,11 +205,11 @@ The branch module defines its own typed list contract.
 
 `BranchListItemDto` contains:
 
-- `public_id`
-- `name_primary`
-- `name_secondary`
-- `is_primary`
-- optional `organization_name_primary`
+- `publicId`
+- `namePrimary`
+- `nameSecondary`
+- `isPrimary`
+- optional `organizationNamePrimary`
 
 ## Relation-Driven Join
 
@@ -255,13 +255,13 @@ This keeps the core reusable without losing module-level clarity.
 ### Branch page listing
 
 ```http
-GET /api/v1/branch?page=1&per_page=20&sort=created_at&direction=desc
+GET /api/v1/branch?page=1&perPage=20&sort=createdAt&direction=desc
 ```
 
 ### Branch page listing with filters and include
 
 ```http
-GET /api/v1/branch?page=1&per_page=10&name=HQ&is_primary=true&include=organization
+GET /api/v1/branch?page=1&perPage=10&name=HQ&isPrimary=true&include=organization
 ```
 
 ## How To Add The Next `getAll()` Module

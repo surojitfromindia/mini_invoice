@@ -24,6 +24,7 @@ pub struct PagePaginationQuery {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct PagePaginationQueryRaw {
     #[serde(default = "default_page_value")]
     page: U64Value,
@@ -82,7 +83,7 @@ mod tests {
     fn page_pagination_accepts_string_values() {
         let query: PagePaginationQuery = serde_json::from_value(serde_json::json!({
             "page": "1",
-            "per_page": "20"
+            "perPage": "20"
         }))
         .unwrap();
 

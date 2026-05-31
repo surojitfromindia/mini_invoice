@@ -12,19 +12,19 @@ http:
       {
         "sku": "ITEM-001",
         "barcode": "8901234567890",
-        "name_primary": "Milk 1L",
-        "name_secondary": "Full Cream",
+        "namePrimary": "Milk 1L",
+        "nameSecondary": "Full Cream",
         "description": "Seeded sample item",
-        "item_type": "inventory",
-        "base_unit_public_id": "2C68214648E8",
-        "purchase_unit_public_id": "2C68214648E8",
-        "sales_unit_public_id": "2C68214648E8",
-        "default_purchase_price": "45.00",
-        "default_sales_price": "52.00",
-        "track_inventory": true,
-        "allow_negative_stock": false,
-        "reorder_level": "10.00",
-        "is_active": true
+        "itemType": "inventory",
+        "baseUnitPublicId": "2C68214648E8",
+        "purchaseUnitPublicId": "2C68214648E8",
+        "salesUnitPublicId": "2C68214648E8",
+        "defaultPurchasePrice": "45.00",
+        "defaultSalesPrice": "52.00",
+        "trackInventory": true,
+        "allowNegativeStock": false,
+        "reorderLevel": "10.00",
+        "isActive": true
       }
   auth: inherit
 
@@ -33,7 +33,7 @@ runtime:
     - type: after-response
       code: |-
         let response_body = res.getBody();
-        let item_public_id = response_body?.data?.public_id;
+        let item_public_id = response_body?.data?.publicId;
         bru.setEnvVar("item_public_id", item_public_id)
 
 settings:

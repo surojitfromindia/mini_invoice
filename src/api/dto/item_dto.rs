@@ -7,7 +7,7 @@ use super::common_dto::{IntoServiceInput, PagePaginationQuery};
 use crate::service::item_service::{ItemListItem, ItemListPageInput, ItemSortField, SortDirection};
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "camelCase")]
 pub enum ItemTypeDto {
     Inventory,
     Service,
@@ -15,7 +15,7 @@ pub enum ItemTypeDto {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "camelCase")]
 pub enum ItemSortFieldDto {
     CreatedAt,
     NamePrimary,
@@ -23,13 +23,14 @@ pub enum ItemSortFieldDto {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "camelCase")]
 pub enum SortDirectionDto {
     Asc,
     Desc,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateItemRequestDto {
     pub sku: String,
     pub barcode: Option<String>,
@@ -107,6 +108,7 @@ impl ItemTypeDto {
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ItemListPageQueryDto {
     #[serde(flatten)]
     pub pagination: PagePaginationQuery,
@@ -185,19 +187,19 @@ mod tests {
         let request: CreateItemRequestDto = serde_json::from_value(serde_json::json!({
             "sku": "ITEM-001",
             "barcode": "12345",
-            "name_primary": "Milk",
-            "name_secondary": "Full Cream",
+            "namePrimary": "Milk",
+            "nameSecondary": "Full Cream",
             "description": "Shelf item",
-            "item_type": "non_inventory",
-            "base_unit_public_id": "u_base",
-            "purchase_unit_public_id": "u_purchase",
-            "sales_unit_public_id": "u_sales",
-            "default_purchase_price": "10.50",
-            "default_sales_price": "12.75",
-            "track_inventory": true,
-            "allow_negative_stock": false,
-            "reorder_level": "4.00",
-            "is_active": true
+            "itemType": "nonInventory",
+            "baseUnitPublicId": "u_base",
+            "purchaseUnitPublicId": "u_purchase",
+            "salesUnitPublicId": "u_sales",
+            "defaultPurchasePrice": "10.50",
+            "defaultSalesPrice": "12.75",
+            "trackInventory": true,
+            "allowNegativeStock": false,
+            "reorderLevel": "4.00",
+            "isActive": true
         }))
         .unwrap();
 
@@ -209,11 +211,11 @@ mod tests {
     fn item_list_page_query_deserializes_filters_and_sort() {
         let query: ItemListPageQueryDto = serde_json::from_value(serde_json::json!({
             "page": 1,
-            "per_page": 20,
+            "perPage": 20,
             "name": "Milk",
             "sku": "ITEM",
-            "is_active": true,
-            "item_type": "inventory",
+            "isActive": true,
+            "itemType": "inventory",
             "sort": "sku",
             "direction": "asc"
         }))

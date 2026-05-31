@@ -4,6 +4,7 @@ use super::common_dto::IntoServiceInput;
 use crate::service::staff_role_service::CreateStaffRoleInput;
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateStaffRoleRequestDto {
     pub name_primary: String,
     pub name_secondary: Option<String>,

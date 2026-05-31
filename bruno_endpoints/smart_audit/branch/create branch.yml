@@ -10,9 +10,9 @@ http:
     type: json
     data: |-
       {
-        "name_primary": "HQ",
-        "name_secondary": "Main office",
-        "is_primary": false
+        "namePrimary": "HQ",
+        "nameSecondary": "Main office",
+        "isPrimary": false
       }
   auth: inherit
 
@@ -21,7 +21,7 @@ runtime:
     - type: after-response
       code: |-
         let response_body = res.getBody();
-        let branch_public_id = response_body?.data?.public_id;
+        let branch_public_id = response_body?.data?.publicId;
         bru.setEnvVar("branch_public_id", branch_public_id)
 
 settings:

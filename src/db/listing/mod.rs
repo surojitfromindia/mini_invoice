@@ -53,12 +53,12 @@ pub fn validate_page_pagination(
     }
 
     if per_page == 0 {
-        return Err(invalid_pagination("per_page must be greater than zero"));
+        return Err(invalid_pagination("perPage must be greater than zero"));
     }
 
     if per_page > MAX_PAGE_SIZE {
         return Err(invalid_pagination(format!(
-            "per_page must be less than or equal to {MAX_PAGE_SIZE}"
+            "perPage must be less than or equal to {MAX_PAGE_SIZE}"
         )));
     }
 

@@ -10,10 +10,10 @@ http:
     type: json
     data: |-
       {
-        "name_primary" : "Organization 1",
-        "name_secondary" : "Organization 1",
-        "country_iso_code" : "IN",
-        "currency_iso_code" : "INR"
+        "namePrimary" : "Organization 1",
+        "nameSecondary" : "Organization 1",
+        "countryIsoCode" : "IN",
+        "currencyIsoCode" : "INR"
       }
   auth: inherit
 
@@ -22,7 +22,7 @@ runtime:
     - type: after-response
       code: |-
         let response_body = res.getBody();
-        let organization_public_id = response_body?.data?.public_id;
+        let organization_public_id = response_body?.data?.publicId;
         bru.setEnvVar("organization_public_id", organization_public_id)
 
 settings:

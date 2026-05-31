@@ -5,6 +5,7 @@ use super::common_dto::IntoServiceInput;
 use crate::service::staff_service::{AcceptStaffInvitationInput, StaffInvitationCreated};
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateStaffInvitationRequestDto {
     pub invitee_email: String,
     pub invitee_first_name: String,
@@ -14,6 +15,7 @@ pub struct CreateStaffInvitationRequestDto {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AcceptStaffInvitationRequestDto {
     pub invitation_token: String,
     pub password: String,
@@ -29,11 +31,13 @@ impl IntoServiceInput<AcceptStaffInvitationInput> for AcceptStaffInvitationReque
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ResendStaffInvitationRequestDto {
     pub invitation_id: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RevokeStaffInvitationRequestDto {
     pub invitation_id: String,
 }

@@ -10,7 +10,7 @@ http:
     type: json
     data: |-
       {
-        "invitation_token": "{{staff_invitation_token}}",
+        "invitationToken": "{{staff_invitation_token}}",
         "password": "12345678"
       }
   auth: inherit

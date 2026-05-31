@@ -16,6 +16,7 @@ impl IntoServiceInput<(String, String)> for LoginRequestDto {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RefreshTokenRequestDto {
     pub refresh_token: String,
 }
@@ -62,5 +63,15 @@ mod tests {
                 "refreshToken": "refresh"
             })
         );
+    }
+
+    #[test]
+    fn refresh_token_request_deserializes_camel_case_keys() {
+        let request: RefreshTokenRequestDto = serde_json::from_value(serde_json::json!({
+            "refreshToken": "refresh"
+        }))
+        .unwrap();
+
+        assert_eq!(request.refresh_token, "refresh");
     }
 }
