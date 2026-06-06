@@ -1,3 +1,4 @@
+use super::openapi_docs;
 use crate::api::api_response::ApiResponse;
 use crate::api::dto::auth_dto::{AuthTokensResponseDto, LoginRequestDto, RefreshTokenRequestDto};
 use crate::api::dto::common_dto::{ActionStatusResponse, IntoServiceInput};
@@ -5,15 +6,38 @@ use crate::api::{AuthenticatedContext, PublicContext};
 use crate::app_state::AppState;
 use crate::errors::app_error::AppError;
 use crate::service::auth_service::AuthService;
+use aide::axum::ApiRouter;
 use axum::http::StatusCode;
 use axum::routing::post;
 use axum::{Json, Router};
 
-pub fn routes() -> Router<AppState> {
-    Router::new()
-        .route("/login", post(login_with_password))
-        .route("/refresh_token", post(refresh_token_handler))
-        .route("/logout", post(logout_handler))
+pub fn routes() -> ApiRouter<AppState> {
+    ApiRouter::from(
+        Router::new()
+            .route("/login", post(login_with_password))
+            .route("/refresh_token", post(refresh_token_handler))
+            .route("/logout", post(logout_handler)),
+    )
+    .api_route_docs(
+        "/login",
+        openapi_docs::method("post", "auth", "login", "Login", |op| {
+            op.input::<Json<LoginRequestDto>>();
+            op.response::<200, ApiResponse<AuthTokensResponseDto>>();
+        }),
+    )
+    .api_route_docs(
+        "/refresh_token",
+        openapi_docs::method("post", "auth", "refreshToken", "Refresh token", |op| {
+            op.input::<Json<RefreshTokenRequestDto>>();
+            op.response::<200, ApiResponse<AuthTokensResponseDto>>();
+        }),
+    )
+    .api_route_docs(
+        "/logout",
+        openapi_docs::method("post", "auth", "logout", "Logout", |op| {
+            op.response::<200, ApiResponse<ActionStatusResponse>>();
+        }),
+    )
 }
 
 async fn login_with_password(

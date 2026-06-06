@@ -1,9 +1,10 @@
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use super::common_dto::IntoServiceInput;
 use crate::service::auth_service::AuthTokens;
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, JsonSchema)]
 pub struct LoginRequestDto {
     pub email: String,
     pub password: String,
@@ -15,7 +16,7 @@ impl IntoServiceInput<(String, String)> for LoginRequestDto {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RefreshTokenRequestDto {
     pub refresh_token: String,
@@ -27,7 +28,7 @@ impl IntoServiceInput<String> for RefreshTokenRequestDto {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AuthTokensResponseDto {
     pub access_token: String,

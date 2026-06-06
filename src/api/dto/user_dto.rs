@@ -1,3 +1,4 @@
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use super::common_dto::IntoServiceInput;
@@ -5,7 +6,7 @@ use crate::service::user_service::{
     CreateUserAccountInput, CurrentUserOrganization, CurrentUserProfile,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateUserAccountRequestDto {
     pub first_name: String,
@@ -25,7 +26,7 @@ impl IntoServiceInput<CreateUserAccountInput> for CreateUserAccountRequestDto {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UserAccountCreatedResponseDto {
     pub email: String,
@@ -37,7 +38,7 @@ impl UserAccountCreatedResponseDto {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CurrentUserOrganizationResponseDto {
     pub public_id: String,
@@ -59,7 +60,7 @@ impl From<CurrentUserOrganization> for CurrentUserOrganizationResponseDto {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CurrentUserResponseDto {
     pub email: String,

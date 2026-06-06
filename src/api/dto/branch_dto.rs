@@ -1,3 +1,4 @@
+use schemars::JsonSchema;
 use sea_orm::FromQueryResult;
 use serde::{Deserialize, Serialize};
 
@@ -7,7 +8,7 @@ use crate::service::branch_service::{
     BranchListItem, BranchListPageInput, BranchSortField, CreateBranchInput, SortDirection,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateBranchRequestDto {
     pub name_primary: String,
@@ -25,21 +26,21 @@ impl IntoServiceInput<CreateBranchInput> for CreateBranchRequestDto {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub enum BranchSortFieldDto {
     CreatedAt,
     NamePrimary,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub enum SortDirectionDto {
     Asc,
     Desc,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct BranchListPageQueryDto {
     #[serde(flatten)]
@@ -69,7 +70,7 @@ impl IntoServiceInput<BranchListPageInput> for BranchListPageQueryDto {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, FromQueryResult)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, FromQueryResult, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct BranchListItemResponseDto {
     pub public_id: String,

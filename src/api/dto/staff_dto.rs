@@ -1,10 +1,11 @@
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use super::common_dto::IntoServiceInput;
 use crate::service::staff_service::{AcceptStaffInvitationInput, StaffInvitationCreated};
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateStaffInvitationRequestDto {
     pub invitee_email: String,
@@ -14,7 +15,7 @@ pub struct CreateStaffInvitationRequestDto {
     pub branch_public_ids: Option<Vec<String>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AcceptStaffInvitationRequestDto {
     pub invitation_token: String,
@@ -30,19 +31,19 @@ impl IntoServiceInput<AcceptStaffInvitationInput> for AcceptStaffInvitationReque
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ResendStaffInvitationRequestDto {
     pub invitation_id: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RevokeStaffInvitationRequestDto {
     pub invitation_id: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct StaffInvitationResponseDto {
     pub invitation_id: String,

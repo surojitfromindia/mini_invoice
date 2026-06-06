@@ -8,6 +8,7 @@ use axum::{Extension, Json, Router};
 mod auth_routes;
 mod branch_routes;
 mod item_routes;
+mod openapi_docs;
 mod organization_routes;
 mod staff_role_routes;
 mod staff_routes;
@@ -23,18 +24,18 @@ pub fn create_routes() -> Router<AppState> {
         ..OpenApi::default()
     };
 
-    let item_routes = ApiRouter::new()
-        .nest("/api/v1/item", item_routes::routes())
-        .finish_api(&mut api);
-
-    Router::new()
+    let documented_routes = ApiRouter::new()
         .nest("/api/v1/auth", auth_routes::routes())
         .nest("/api/v1/branch", branch_routes::routes())
-        .merge(item_routes)
+        .nest("/api/v1/item", item_routes::routes())
         .nest("/api/v1/staff_role", staff_role_routes::routes())
         .nest("/api/v1/user_account", user_routes::routes())
         .nest("/api/v1/staff", staff_routes::routes())
         .nest("/api/v1/organization", organization_routes::routes())
+        .finish_api(&mut api);
+
+    Router::new()
+        .merge(documented_routes)
         .route("/api/docs/openapi.json", get(serve_openapi))
         .route(
             "/api/docs/swagger",

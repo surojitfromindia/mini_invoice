@@ -1,9 +1,10 @@
+use schemars::JsonSchema;
 use serde::Deserialize;
 
 use super::common_dto::IntoServiceInput;
 use crate::service::staff_role_service::CreateStaffRoleInput;
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateStaffRoleRequestDto {
     pub name_primary: String,

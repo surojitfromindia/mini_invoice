@@ -1,3 +1,4 @@
+use super::openapi_docs;
 use crate::api::api_response::ApiResponse;
 use crate::api::dto::common_dto::{ActionStatusResponse, IntoServiceInput};
 use crate::api::dto::staff_dto::{
@@ -13,16 +14,71 @@ use crate::resolver::staff_payload_resolver::{
     CreateStaffInvitationResolutionInput, StaffPayloadResolver,
 };
 use crate::service::staff_service::StaffService;
+use aide::axum::ApiRouter;
 use axum::http::StatusCode;
 use axum::routing::post;
 use axum::{Json, Router};
 
-pub fn routes() -> Router<AppState> {
-    Router::new()
-        .route("/invitations", post(create_staff_invitation_handler))
-        .route("/invitations/accept", post(accept_staff_invitation_handler))
-        .route("/invitations/resend", post(resend_staff_invitation_handler))
-        .route("/invitations/revoke", post(revoke_staff_invitation_handler))
+pub fn routes() -> ApiRouter<AppState> {
+    ApiRouter::from(
+        Router::new()
+            .route("/invitations", post(create_staff_invitation_handler))
+            .route("/invitations/accept", post(accept_staff_invitation_handler))
+            .route("/invitations/resend", post(resend_staff_invitation_handler))
+            .route("/invitations/revoke", post(revoke_staff_invitation_handler)),
+    )
+    .api_route_docs(
+        "/invitations",
+        openapi_docs::method(
+            "post",
+            "staff",
+            "createStaffInvitation",
+            "Create staff invitation",
+            |op| {
+                op.input::<Json<CreateStaffInvitationRequestDto>>();
+                op.response::<201, ApiResponse<StaffInvitationResponseDto>>();
+            },
+        ),
+    )
+    .api_route_docs(
+        "/invitations/accept",
+        openapi_docs::method(
+            "post",
+            "staff",
+            "acceptStaffInvitation",
+            "Accept staff invitation",
+            |op| {
+                op.input::<Json<AcceptStaffInvitationRequestDto>>();
+                op.response::<201, ApiResponse<ActionStatusResponse>>();
+            },
+        ),
+    )
+    .api_route_docs(
+        "/invitations/resend",
+        openapi_docs::method(
+            "post",
+            "staff",
+            "resendStaffInvitation",
+            "Resend staff invitation",
+            |op| {
+                op.input::<Json<ResendStaffInvitationRequestDto>>();
+                op.response::<200, ApiResponse<StaffInvitationResponseDto>>();
+            },
+        ),
+    )
+    .api_route_docs(
+        "/invitations/revoke",
+        openapi_docs::method(
+            "post",
+            "staff",
+            "revokeStaffInvitation",
+            "Revoke staff invitation",
+            |op| {
+                op.input::<Json<RevokeStaffInvitationRequestDto>>();
+                op.response::<200, ApiResponse<ActionStatusResponse>>();
+            },
+        ),
+    )
 }
 
 async fn create_staff_invitation_handler(

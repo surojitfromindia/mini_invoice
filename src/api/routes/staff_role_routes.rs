@@ -1,3 +1,4 @@
+use super::openapi_docs;
 use crate::api::AuthorizedContext;
 use crate::api::api_response::ApiResponse;
 use crate::api::dto::common_dto::{IntoServiceInput, PublicIdResponse};
@@ -6,12 +7,25 @@ use crate::app_state::AppState;
 use crate::auth::permission::Permission;
 use crate::errors::app_error::AppError;
 use crate::service::staff_role_service::StaffRoleService;
+use aide::axum::ApiRouter;
 use axum::http::StatusCode;
 use axum::routing::post;
 use axum::{Json, Router};
 
-pub fn routes() -> Router<AppState> {
-    Router::new().route("/", post(create_staff_role_handler))
+pub fn routes() -> ApiRouter<AppState> {
+    ApiRouter::from(Router::new().route("/", post(create_staff_role_handler))).api_route_docs(
+        "/",
+        openapi_docs::method(
+            "post",
+            "staff_role",
+            "createStaffRole",
+            "Create staff role",
+            |op| {
+                op.input::<Json<CreateStaffRoleRequestDto>>();
+                op.response::<201, ApiResponse<PublicIdResponse>>();
+            },
+        ),
+    )
 }
 
 async fn create_staff_role_handler(
