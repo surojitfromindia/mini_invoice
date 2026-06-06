@@ -1,10 +1,13 @@
 use crate::errors::app_error::AppError;
+use aide::operation::OperationOutput;
+use aide::{generate::GenContext, openapi::Operation};
 use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use schemars::JsonSchema;
 use serde::Serialize;
 
-#[derive(Serialize)]
+#[derive(Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ApiResponse<T> {
     pub success: bool,
@@ -17,10 +20,11 @@ pub struct ApiResponse<T> {
     pub error: Option<ApiError>,
 
     #[serde(skip)]
+    #[schemars(skip)]
     pub status: StatusCode,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ApiError {
     pub code: String,
@@ -67,6 +71,17 @@ impl<T: Serialize> IntoResponse for ApiResponse<T> {
     }
 }
 
+impl<T: JsonSchema> OperationOutput for ApiResponse<T> {
+    type Inner = Self;
+
+    fn operation_response(
+        ctx: &mut GenContext,
+        operation: &mut Operation,
+    ) -> Option<aide::openapi::Response> {
+        <Json<Self> as OperationOutput>::operation_response(ctx, operation)
+    }
+}
+
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let meta = self.meta();
@@ -82,4 +97,8 @@ impl IntoResponse for AppError {
 
         (status, Json(body)).into_response()
     }
+}
+
+impl OperationOutput for AppError {
+    type Inner = ApiResponse<()>;
 }

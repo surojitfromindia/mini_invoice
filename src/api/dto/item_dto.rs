@@ -1,19 +1,20 @@
 use crate::db::listing::PageListResult;
 use crate::entity::item::item_entity::{ItemStatus, ItemType, ItemUsage};
+use schemars::JsonSchema;
 use sea_orm::entity::prelude::Decimal;
 use serde::{Deserialize, Serialize};
 
 use super::common_dto::{IntoServiceInput, PagePaginationQuery};
 use crate::service::item_service::{ItemListItem, ItemListPageInput, ItemSortField, SortDirection};
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub enum ItemTypeDto {
     Product,
     Service,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub enum ItemUsageDto {
     Sales,
@@ -21,7 +22,7 @@ pub enum ItemUsageDto {
     Both,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub enum ItemStatusDto {
     Active,
@@ -29,7 +30,7 @@ pub enum ItemStatusDto {
     Deleted,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub enum ItemSortFieldDto {
     CreatedAt,
@@ -37,14 +38,14 @@ pub enum ItemSortFieldDto {
     Sku,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub enum SortDirectionDto {
     Asc,
     Desc,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateItemRequestDto {
     pub sku: String,
@@ -159,7 +160,7 @@ impl ItemStatusDto {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ItemListPageQueryDto {
     #[serde(flatten)]
@@ -194,7 +195,7 @@ impl IntoServiceInput<ItemListPageInput> for ItemListPageQueryDto {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ItemListItemResponseDto {
     pub public_id: String,

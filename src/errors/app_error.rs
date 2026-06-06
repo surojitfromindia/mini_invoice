@@ -1,3 +1,4 @@
+use crate::errors::branch_service_errors::BranchServiceError;
 use crate::errors::error_codes;
 use crate::errors::error_meta::{ErrorMeta, ErrorMetadata};
 use crate::errors::internal_error_messages;
@@ -9,7 +10,6 @@ use crate::errors::user_credential_service_errors::UserCredentialServiceError;
 use crate::errors::user_service_errors::UserServiceError;
 use sea_orm::DbErr;
 use std::fmt;
-use crate::errors::branch_service_errors::BranchServiceError;
 
 #[derive(Debug)]
 #[allow(dead_code)]

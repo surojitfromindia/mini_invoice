@@ -1,23 +1,25 @@
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 pub trait IntoServiceInput<T> {
     fn into_service_input(self) -> T;
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PublicIdResponse {
     pub public_id: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ActionStatusResponse {
     pub status: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, JsonSchema)]
 #[serde(try_from = "PagePaginationQueryRaw")]
+#[schemars(rename_all = "camelCase")]
 pub struct PagePaginationQuery {
     pub page: u64,
     pub per_page: u64,

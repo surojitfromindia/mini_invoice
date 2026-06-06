@@ -1,3 +1,4 @@
+use schemars::JsonSchema;
 use sea_orm::{ConnectionTrait, PaginatorTrait, SelectorTrait};
 use serde::Serialize;
 
@@ -14,14 +15,14 @@ pub struct ValidatedPagePagination {
     pub per_page: u64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PageListResult<T> {
     pub rows: Vec<T>,
     pub meta: PageMeta,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PageMeta {
     pub page: u64,
