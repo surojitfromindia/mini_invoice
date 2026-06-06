@@ -1,5 +1,5 @@
 use crate::entity::actor_entity::{self as Actor, ActorStatus, ActorType};
-use crate::entity::{ClientAppPrimaryId, PublicId, UserPrimaryId};
+use crate::entity::{PrimaryId, PublicId};
 use crate::errors::app_error::AppError;
 use crate::utils::date_helpers::DateHelper;
 use sea_orm::{ActiveModelTrait, ConnectionTrait, Set};
@@ -9,12 +9,12 @@ pub struct ActorService {}
 impl ActorService {
     pub async fn create_from_user(
         db_transaction: &impl ConnectionTrait,
-        user_id: UserPrimaryId,
+        user_id: PrimaryId,
         public_id: PublicId,
     ) -> Result<(), AppError> {
         let now = DateHelper::now().value();
         let actor_active_model = Actor::ActiveModel {
-            status : Set(ActorStatus::Active),
+            status: Set(ActorStatus::Active),
             user_id: Set(Some(user_id)),
             public_user_id: Set(Some(public_id)),
             client_app_id: Set(None),
@@ -31,12 +31,12 @@ impl ActorService {
     #[allow(dead_code)]
     pub async fn create_from_client_app(
         db_transaction: &impl ConnectionTrait,
-        client_app_id: ClientAppPrimaryId,
+        client_app_id: PrimaryId,
         public_id: PublicId,
     ) -> Result<(), AppError> {
         let now = DateHelper::now().value();
         let actor_active_model = Actor::ActiveModel {
-            status : Set(ActorStatus::Active),
+            status: Set(ActorStatus::Active),
             user_id: Set(None),
             public_user_id: Set(None),
             client_app_id: Set(Some(client_app_id)),

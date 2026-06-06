@@ -1,7 +1,7 @@
 use sea_orm::ConnectionTrait;
 
 use crate::api::dto::item_dto::CreateItemResolutionInput;
-use crate::entity::{OrganizationPrimaryId, UnitPrimaryId};
+use crate::entity::PrimaryId;
 use crate::errors::app_error::AppError;
 use crate::resolver::public_id_resolver::PublicIdResolver;
 use crate::service::item_service::CreateItemInput;
@@ -13,7 +13,7 @@ impl ItemPayloadResolver {
     // them once so the service only receives internal foreign keys.
     pub async fn create_item(
         db_transaction: &impl ConnectionTrait,
-        organization_id: OrganizationPrimaryId,
+        organization_id: PrimaryId,
         payload: CreateItemResolutionInput,
     ) -> Result<CreateItemInput, AppError> {
         let unit_public_ids = Self::collect_unit_public_ids(
@@ -71,10 +71,10 @@ impl ItemPayloadResolver {
     }
 
     fn map_resolved_unit_ids(
-        unit_ids: Vec<UnitPrimaryId>,
+        unit_ids: Vec<PrimaryId>,
         has_purchase_unit: bool,
         has_sales_unit: bool,
-    ) -> Result<(UnitPrimaryId, Option<UnitPrimaryId>, Option<UnitPrimaryId>), AppError> {
+    ) -> Result<(PrimaryId, Option<PrimaryId>, Option<PrimaryId>), AppError> {
         let mut resolved_ids = unit_ids.into_iter();
         let base_unit_id = resolved_ids
             .next()

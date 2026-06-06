@@ -1,8 +1,10 @@
 use sea_orm::{ActiveModelTrait, ConnectionTrait, Set, TransactionTrait};
 
+use crate::entity::organization::organization_entity::OrganizationStatus;
+use crate::entity::organization::organization_meta_entity::OrganizationMetaStatus;
 use crate::{
     entity::{
-        ActorPrimaryId, OrganizationPrimaryId, PublicId,
+        PrimaryId, PublicId,
         organization::{
             organization_entity as Organization, organization_meta_entity as OrganizationMeta,
         },
@@ -15,8 +17,6 @@ use crate::{
     service::unit_service::UnitService,
     utils::{date_helpers::DateHelper, id_generator::IdGenerator},
 };
-use crate::entity::organization::organization_entity::OrganizationStatus;
-use crate::entity::organization::organization_meta_entity::OrganizationMetaStatus;
 
 pub struct CreateOrganizationInput {
     pub name_primary: String,
@@ -57,7 +57,7 @@ impl OrganizationService {
         let meta_payload = CreateOrganizationMeta::from(&payload);
 
         let organization_active_model = Organization::ActiveModel {
-            status : Set(OrganizationStatus::Active),
+            status: Set(OrganizationStatus::Active),
             prime_user_id: Set(user_id),
             public_id: Set(public_id),
             name_primary: Set(payload.name_primary),
@@ -89,8 +89,8 @@ impl OrganizationService {
     async fn seed_organization_defaults(
         db_transaction: &impl ConnectionTrait,
         ctx: &ServiceContext,
-        actor_id: ActorPrimaryId,
-        organization_id: OrganizationPrimaryId,
+        actor_id: PrimaryId,
+        organization_id: PrimaryId,
     ) -> Result<(), AppError> {
         // create organization default roles.
         let default_roles =
@@ -125,13 +125,13 @@ impl OrganizationService {
     // row stays focused on identity while defaults can evolve independently.
     async fn create_organization_meta(
         db_transaction: &impl ConnectionTrait,
-        actor_id: ActorPrimaryId,
-        organization_id: OrganizationPrimaryId,
+        actor_id: PrimaryId,
+        organization_id: PrimaryId,
         payload: CreateOrganizationMeta,
     ) -> Result<(), AppError> {
         let now = DateHelper::now().value();
         let organization_meta_active_model = OrganizationMeta::ActiveModel {
-            status : Set(OrganizationMetaStatus::Active),
+            status: Set(OrganizationMetaStatus::Active),
             organization_id: Set(organization_id),
             country_iso_code: Set(payload.country_iso_code),
             currency_iso_code: Set(payload.currency_iso_code),

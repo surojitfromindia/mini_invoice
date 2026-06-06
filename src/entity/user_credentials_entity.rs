@@ -1,3 +1,4 @@
+use crate::entity::PrimaryId;
 use sea_orm::entity::prelude::*;
 
 #[derive(Debug, Clone, PartialEq, EnumIter, DeriveActiveEnum)]
@@ -18,7 +19,7 @@ pub enum UserCredentialsStatus {
 #[sea_orm(table_name = "user_credentials")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
-    pub user_id: i32,
+    pub user_id: PrimaryId,
     #[sea_orm(column_type = "Text")]
     pub password_hash: String,
     #[sea_orm(column_type = "Text", nullable)]

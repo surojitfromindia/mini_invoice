@@ -10,7 +10,7 @@ use crate::entity::organization::branch_entity::{BranchModel, BranchStatus};
 use crate::entity::organization::{
     branch_entity as Branch, organization_meta_entity as OrganizationMeta,
 };
-use crate::entity::{ActorPrimaryId, BranchPrimaryId, OrganizationPrimaryId, PublicId};
+use crate::entity::{PrimaryId, PublicId};
 use crate::errors::app_error::AppError;
 use crate::service::service_context::ServiceContext;
 use crate::utils::date_helpers::DateHelper;
@@ -100,8 +100,8 @@ impl BranchService {
 
     pub async fn create_branch_for_organization(
         db_transaction: &impl ConnectionTrait,
-        actor_id: ActorPrimaryId,
-        organization_id: OrganizationPrimaryId,
+        actor_id: PrimaryId,
+        organization_id: PrimaryId,
         name_primary: String,
         name_secondary: Option<String>,
         is_primary_requested: bool,
@@ -138,9 +138,9 @@ impl BranchService {
 
     async fn set_primary_branch(
         db_transaction: &impl ConnectionTrait,
-        actor_id: ActorPrimaryId,
-        organization_id: OrganizationPrimaryId,
-        branch_id: BranchPrimaryId,
+        actor_id: PrimaryId,
+        organization_id: PrimaryId,
+        branch_id: PrimaryId,
     ) -> Result<(), AppError> {
         let now = DateHelper::now().value();
 
@@ -200,7 +200,7 @@ impl BranchService {
     }
 
     fn build_branch_list_query(
-        organization_id: OrganizationPrimaryId,
+        organization_id: PrimaryId,
         name: Option<&str>,
         is_primary: Option<bool>,
     ) -> sea_orm::Select<Branch::Entity> {

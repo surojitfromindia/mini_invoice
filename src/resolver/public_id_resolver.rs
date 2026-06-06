@@ -10,10 +10,7 @@ use crate::entity::organization::{
 use crate::entity::staff::{
     staff_invitation_entity as StaffInvitation, staff_role_entity as StaffRole,
 };
-use crate::entity::{
-    ActorPrimaryId, BranchPrimaryId, OrganizationPrimaryId, StaffInvitationPrimaryId,
-    StaffRolePrimaryId, UnitPrimaryId, actor_entity as Actor,
-};
+use crate::entity::{PrimaryId, actor_entity as Actor};
 use crate::errors::app_error::AppError;
 use crate::errors::item_service_errors::ItemServiceError;
 use crate::errors::organization_service_errors::OrgServiceError;
@@ -28,7 +25,7 @@ impl PublicIdResolver {
     pub async fn organization_id(
         db_transaction: &impl ConnectionTrait,
         public_id: &str,
-    ) -> Result<OrganizationPrimaryId, AppError> {
+    ) -> Result<PrimaryId, AppError> {
         Organization::Entity::find()
             .filter(Organization::Column::PublicId.eq(public_id))
             .one(db_transaction)
@@ -39,9 +36,9 @@ impl PublicIdResolver {
 
     pub async fn staff_invitation_id(
         db_transaction: &impl ConnectionTrait,
-        organization_id: OrganizationPrimaryId,
+        organization_id: PrimaryId,
         public_id: &str,
-    ) -> Result<StaffInvitationPrimaryId, AppError> {
+    ) -> Result<PrimaryId, AppError> {
         StaffInvitation::Entity::find()
             .filter(StaffInvitation::Column::OrganizationId.eq(organization_id))
             .filter(StaffInvitation::Column::PublicId.eq(public_id))
@@ -53,9 +50,9 @@ impl PublicIdResolver {
 
     pub async fn staff_role_id(
         db_transaction: &impl ConnectionTrait,
-        organization_id: OrganizationPrimaryId,
+        organization_id: PrimaryId,
         public_id: &str,
-    ) -> Result<StaffRolePrimaryId, AppError> {
+    ) -> Result<PrimaryId, AppError> {
         StaffRole::Entity::find()
             .filter(StaffRole::Column::OrganizationId.eq(organization_id))
             .filter(StaffRole::Column::PublicId.eq(public_id))
@@ -67,9 +64,9 @@ impl PublicIdResolver {
 
     pub async fn branch_ids(
         db_transaction: &impl ConnectionTrait,
-        organization_id: OrganizationPrimaryId,
+        organization_id: PrimaryId,
         branch_public_ids: Option<&[String]>,
-    ) -> Result<Vec<BranchPrimaryId>, AppError> {
+    ) -> Result<Vec<PrimaryId>, AppError> {
         let normalized_branch_public_ids = branch_public_ids
             .map(|public_ids| normalize_public_ids(public_ids, true))
             .unwrap_or_default();
@@ -95,7 +92,7 @@ impl PublicIdResolver {
     pub async fn actor_id(
         db_transaction: &impl ConnectionTrait,
         public_id: &str,
-    ) -> Result<ActorPrimaryId, AppError> {
+    ) -> Result<PrimaryId, AppError> {
         Actor::Entity::find()
             .filter(Actor::Column::PublicUserId.eq(public_id))
             .one(db_transaction)
@@ -107,9 +104,9 @@ impl PublicIdResolver {
 
     pub async fn unit_ids(
         db_transaction: &impl ConnectionTrait,
-        organization_id: OrganizationPrimaryId,
+        organization_id: PrimaryId,
         unit_public_ids: &[String],
-    ) -> Result<Vec<UnitPrimaryId>, AppError> {
+    ) -> Result<Vec<PrimaryId>, AppError> {
         let normalized_unit_public_ids = normalize_public_ids(unit_public_ids, false);
         if normalized_unit_public_ids.is_empty() {
             return Err(ItemServiceError::UnitNotFound.into());
@@ -144,8 +141,8 @@ impl PublicIdResolver {
 
     async fn default_branch_id_for_organization(
         db_transaction: &impl ConnectionTrait,
-        organization_id: OrganizationPrimaryId,
-    ) -> Result<BranchPrimaryId, AppError> {
+        organization_id: PrimaryId,
+    ) -> Result<PrimaryId, AppError> {
         let organization_meta = OrganizationMeta::Entity::find_by_id(organization_id)
             .one(db_transaction)
             .await?

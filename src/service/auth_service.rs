@@ -1,3 +1,4 @@
+use crate::entity::PrimaryId;
 use crate::entity::login_log_entity::SignInLogEventType;
 use crate::errors::app_error::AppError;
 use crate::errors::jwt_errors::JwtError;
@@ -137,7 +138,7 @@ impl AuthService {
 
     async fn issue_auth_tokens(
         ctx: &ServiceContext,
-        user_id: i32,
+        user_id: PrimaryId,
         user_public_id: &str,
     ) -> Result<AuthTokens, AppError> {
         let settings = &ctx.app_state.settings;

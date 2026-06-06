@@ -1,4 +1,7 @@
-use crate::entity::login_log_entity::{self as entity, LoginLogStatus, RequestContext, SignInLogEventType};
+use crate::entity::PrimaryId;
+use crate::entity::login_log_entity::{
+    self as entity, LoginLogStatus, RequestContext, SignInLogEventType,
+};
 use crate::errors::app_error::AppError;
 use crate::service::service_context::ServiceContext;
 use crate::utils::date_helpers::DateHelper;
@@ -9,7 +12,7 @@ pub struct LoginLogsService {}
 impl LoginLogsService {
     pub async fn save_log(
         ctx: &ServiceContext,
-        user_id: Option<i32>,
+        user_id: Option<PrimaryId>,
         identifier: String,
         event_type: SignInLogEventType,
         request_context: Option<RequestContext>,

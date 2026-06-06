@@ -1,4 +1,4 @@
-use super::common_types::PublicId;
+use super::common_types::{PrimaryId, PublicId};
 use sea_orm::entity::prelude::*;
 
 #[derive(Debug, Clone, PartialEq, EnumIter, DeriveActiveEnum)]
@@ -26,10 +26,10 @@ pub enum ActorStatus {
 #[sea_orm(table_name = "actors")]
 pub struct Model {
     #[sea_orm(primary_key)]
-    pub id: i32,
-    pub user_id: Option<i32>,
+    pub id: PrimaryId,
+    pub user_id: Option<PrimaryId>,
     pub public_user_id: Option<PublicId>,
-    pub client_app_id: Option<i32>,
+    pub client_app_id: Option<PrimaryId>,
     pub public_client_app_id: Option<PublicId>,
     pub actor_type: ActorType,
     pub status: ActorStatus,

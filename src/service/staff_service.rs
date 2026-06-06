@@ -1,17 +1,16 @@
 use crate::config::settings::Settings;
+use crate::entity::PrimaryId;
 use crate::entity::organization::organization_entity as Organization;
 use crate::entity::organization::organization_entity::OrganizationModel;
 use crate::entity::staff::staff_branch_entity as StaffBranch;
+use crate::entity::staff::staff_branch_entity::StaffBranchStatus;
 use crate::entity::staff::staff_entity::{self as Staff, StaffStatus};
 use crate::entity::staff::staff_invitation_branch_entity as StaffInvitationBranch;
+use crate::entity::staff::staff_invitation_branch_entity::StaffInvitationBranchStatus;
 use crate::entity::staff::staff_invitation_entity::{
     self as StaffInvitation, StaffInvitationStatus,
 };
 use crate::entity::user_entity::UserModel;
-use crate::entity::{
-    BranchPrimaryId, OrganizationPrimaryId, StaffInvitationPrimaryId, StaffPrimaryId,
-    StaffRolePrimaryId, UserPrimaryId,
-};
 use crate::errors::app_error::AppError;
 use crate::errors::staff_service_errors::StaffServiceError;
 use crate::service::service_context::ServiceContext;
@@ -25,8 +24,6 @@ use sea_orm::{
     ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseTransaction, EntityTrait, QueryFilter,
     Set, TransactionTrait,
 };
-use crate::entity::staff::staff_branch_entity::StaffBranchStatus;
-use crate::entity::staff::staff_invitation_branch_entity::StaffInvitationBranchStatus;
 
 pub struct StaffService;
 
@@ -34,8 +31,8 @@ pub struct CreateStaffInvitationInput {
     pub invitee_email: String,
     pub invitee_first_name: String,
     pub invitee_last_name: String,
-    pub invited_role_id: StaffRolePrimaryId,
-    pub branch_ids: Vec<BranchPrimaryId>,
+    pub invited_role_id: PrimaryId,
+    pub branch_ids: Vec<PrimaryId>,
 }
 
 pub struct AcceptStaffInvitationInput {
@@ -59,7 +56,7 @@ struct InvitationTokenBundle {
 impl StaffService {
     pub async fn get_default_organization_for_user(
         db_transaction: &impl ConnectionTrait,
-        user_id: UserPrimaryId,
+        user_id: PrimaryId,
     ) -> Result<Option<OrganizationModel>, AppError> {
         let staff = Staff::Entity::find()
             .filter(Staff::COLUMN.user_id.eq(user_id))
@@ -82,7 +79,7 @@ impl StaffService {
 
     pub async fn get_organization_for_user(
         ctx: &ServiceContext,
-        user_id: UserPrimaryId,
+        user_id: PrimaryId,
         organization_public_id: &str,
     ) -> Result<Organization::Model, AppError> {
         let organization = Organization::Entity::find()
@@ -199,7 +196,7 @@ impl StaffService {
 
     pub async fn resend_staff_invitation(
         ctx: &ServiceContext,
-        invitation_id: StaffInvitationPrimaryId,
+        invitation_id: PrimaryId,
     ) -> Result<StaffInvitationCreated, AppError> {
         let actor_id = ctx.get_actor_id()?;
         let invitation =
@@ -247,7 +244,7 @@ impl StaffService {
 
     pub async fn revoke_staff_invitation(
         ctx: &ServiceContext,
-        invitation_id: StaffInvitationPrimaryId,
+        invitation_id: PrimaryId,
     ) -> Result<(), AppError> {
         let actor_id = ctx.get_actor_id()?;
         let invitation =
@@ -282,9 +279,9 @@ impl StaffService {
     pub async fn create_staff_from_user(
         db_transaction: &impl ConnectionTrait,
         ctx: &ServiceContext,
-        organization_id: OrganizationPrimaryId,
-        branch_ids: &[BranchPrimaryId],
-        role_id: StaffRolePrimaryId,
+        organization_id: PrimaryId,
+        branch_ids: &[PrimaryId],
+        role_id: PrimaryId,
     ) -> Result<(), AppError> {
         let actor_id = ctx.get_actor_id()?;
         let user_id = ctx.get_user_id()?;
@@ -322,9 +319,9 @@ impl StaffService {
 
     async fn attach_invitation_to_branches(
         db_transaction: &impl ConnectionTrait,
-        actor_id: i32,
-        invitation_id: StaffInvitationPrimaryId,
-        branch_ids: &[BranchPrimaryId],
+        actor_id: PrimaryId,
+        invitation_id: PrimaryId,
+        branch_ids: &[PrimaryId],
     ) -> Result<(), AppError> {
         let now = DateHelper::now().value();
         for branch_id in branch_ids.iter().copied() {
@@ -340,7 +337,7 @@ impl StaffService {
             }
 
             StaffInvitationBranch::ActiveModel {
-                status : Set(StaffInvitationBranchStatus::Active),
+                status: Set(StaffInvitationBranchStatus::Active),
                 staff_invitation_id: Set(invitation_id),
                 branch_id: Set(branch_id),
                 created_by_actor_id: Set(actor_id),
@@ -358,9 +355,9 @@ impl StaffService {
 
     async fn attach_staff_to_branches(
         db_transaction: &impl ConnectionTrait,
-        actor_id: i32,
-        staff_id: StaffPrimaryId,
-        branch_ids: &[BranchPrimaryId],
+        actor_id: PrimaryId,
+        staff_id: PrimaryId,
+        branch_ids: &[PrimaryId],
     ) -> Result<(), AppError> {
         let now = DateHelper::now().value();
         for branch_id in branch_ids.iter().copied() {
@@ -376,7 +373,7 @@ impl StaffService {
             }
 
             StaffBranch::ActiveModel {
-                status : Set(StaffBranchStatus::Active),
+                status: Set(StaffBranchStatus::Active),
                 staff_id: Set(staff_id),
                 branch_id: Set(branch_id),
                 created_by_actor_id: Set(actor_id),
@@ -488,7 +485,7 @@ impl StaffService {
     async fn ensure_user_credential(
         db_transaction: &DatabaseTransaction,
         settings: &Settings,
-        user_id: UserPrimaryId,
+        user_id: PrimaryId,
         password: &String,
     ) -> Result<(), AppError> {
         let has_credential =
@@ -502,8 +499,8 @@ impl StaffService {
 
     async fn get_invitation_branch_ids(
         db_transaction: &impl ConnectionTrait,
-        invitation_id: StaffInvitationPrimaryId,
-    ) -> Result<Vec<BranchPrimaryId>, AppError> {
+        invitation_id: PrimaryId,
+    ) -> Result<Vec<PrimaryId>, AppError> {
         Ok(StaffInvitationBranch::Entity::find()
             .filter(StaffInvitationBranch::Column::StaffInvitationId.eq(invitation_id))
             .all(db_transaction)
@@ -516,7 +513,7 @@ impl StaffService {
     async fn find_or_create_staff_from_invitation(
         db_transaction: &impl ConnectionTrait,
         invitation: &StaffInvitation::Model,
-        user_id: UserPrimaryId,
+        user_id: PrimaryId,
         now: chrono::DateTime<chrono::Utc>,
     ) -> Result<Staff::Model, AppError> {
         if let Some(staff) = Staff::Entity::find()
@@ -581,8 +578,8 @@ impl StaffService {
 
     async fn revoke_other_pending_invitations(
         db_transaction: &impl ConnectionTrait,
-        accepted_invitation_id: StaffInvitationPrimaryId,
-        organization_id: OrganizationPrimaryId,
+        accepted_invitation_id: PrimaryId,
+        organization_id: PrimaryId,
         invitee_email: &str,
         now: chrono::DateTime<chrono::Utc>,
     ) -> Result<(), AppError> {
@@ -614,7 +611,7 @@ impl StaffService {
 
     async fn staff_invitation_by_id(
         db_transaction: &impl ConnectionTrait,
-        invitation_id: StaffInvitationPrimaryId,
+        invitation_id: PrimaryId,
     ) -> Result<StaffInvitation::Model, AppError> {
         StaffInvitation::Entity::find_by_id(invitation_id)
             .one(db_transaction)

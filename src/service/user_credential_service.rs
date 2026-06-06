@@ -1,4 +1,5 @@
 use crate::config::settings::Settings;
+use crate::entity::PrimaryId;
 use crate::entity::user_credentials_entity::{self as UserCredentials, UserCredentialsStatus};
 use crate::errors::app_error::AppError;
 use crate::errors::user_credential_service_errors::UserCredentialServiceError;
@@ -7,8 +8,8 @@ use crate::utils::date_helpers::DateHelper;
 use crate::utils::password_helpers::PasswordHelpers;
 use sea_orm::prelude::Expr;
 use sea_orm::{
-    ActiveModelTrait, ConnectionTrait, DatabaseTransaction, DbErr, EntityTrait, ExprTrait,
-    QueryFilter, Set,
+    ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseTransaction, DbErr, EntityTrait,
+    ExprTrait, QueryFilter, Set,
 };
 
 pub struct UserCredentialService;
@@ -19,7 +20,7 @@ impl UserCredentialService {
     pub async fn save_credential(
         settings: &Settings,
         db_transaction: &DatabaseTransaction,
-        user_id: i32,
+        user_id: PrimaryId,
         plain_password: impl Into<&String>,
     ) -> Result<bool, AppError> {
         let now = DateHelper::now().value();
@@ -43,7 +44,7 @@ impl UserCredentialService {
 
     pub async fn save_last_login_at(
         db_transaction: &impl ConnectionTrait,
-        user_id: i32,
+        user_id: PrimaryId,
     ) -> Result<(), DbErr> {
         let now = DateHelper::now().value();
 
@@ -58,7 +59,7 @@ impl UserCredentialService {
 
     pub async fn reset_failed_attempts(
         db_transaction: &impl ConnectionTrait,
-        user_id: i32,
+        user_id: PrimaryId,
     ) -> Result<(), DbErr> {
         UserCredentials::Entity::update_many()
             .col_expr(UserCredentials::COLUMN.failed_attempts, Expr::value(0))
@@ -70,7 +71,7 @@ impl UserCredentialService {
 
     pub async fn inc_failed_attempts(
         db_transaction: &impl ConnectionTrait,
-        user_id: i32,
+        user_id: PrimaryId,
     ) -> Result<(), DbErr> {
         UserCredentials::Entity::update_many()
             .col_expr(
@@ -85,7 +86,7 @@ impl UserCredentialService {
 
     pub async fn get_credential(
         ctx: &ServiceContext,
-        user_id: i32,
+        user_id: PrimaryId,
     ) -> Result<UserCredentialsModel, AppError> {
         let data = UserCredentials::Entity::find()
             .filter(UserCredentials::COLUMN.user_id.eq(user_id))
@@ -97,7 +98,7 @@ impl UserCredentialService {
 
     pub async fn credential_exists(
         db_transaction: &impl ConnectionTrait,
-        user_id: i32,
+        user_id: PrimaryId,
     ) -> Result<bool, AppError> {
         let exists = UserCredentials::Entity::find()
             .filter(UserCredentials::COLUMN.user_id.eq(user_id))
@@ -127,7 +128,7 @@ impl UserCredentialService {
     pub async fn save_refresh_token(
         settings: &Settings,
         db_transaction: &impl ConnectionTrait,
-        user_id: i32,
+        user_id: PrimaryId,
         refresh_token: &str,
         refresh_token_expires_at: chrono::DateTime<chrono::Utc>,
     ) -> Result<(), AppError> {
@@ -150,7 +151,7 @@ impl UserCredentialService {
 
     pub async fn clear_refresh_token(
         db_transaction: &impl ConnectionTrait,
-        user_id: i32,
+        user_id: PrimaryId,
     ) -> Result<(), DbErr> {
         UserCredentials::Entity::update_many()
             .col_expr(

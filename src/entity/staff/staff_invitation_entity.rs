@@ -1,4 +1,4 @@
-use crate::entity::{ActorPrimaryId, OrganizationPrimaryId, PublicId};
+use crate::entity::{PrimaryId, PublicId};
 use sea_orm::entity::prelude::*;
 
 #[derive(Debug, Clone, PartialEq, EnumIter, DeriveActiveEnum)]
@@ -23,22 +23,22 @@ pub enum StaffInvitationStatus {
 #[sea_orm(table_name = "staff_invitations")]
 pub struct Model {
     #[sea_orm(primary_key)]
-    pub id: i32,
+    pub id: PrimaryId,
     #[sea_orm(unique)]
     pub public_id: PublicId,
-    pub organization_id: OrganizationPrimaryId,
+    pub organization_id: PrimaryId,
     pub invitee_email: String,
     pub invitee_first_name: String,
     pub invitee_last_name: String,
-    pub invited_role_id: i32,
+    pub invited_role_id: PrimaryId,
     pub invitation_token_hash: String,
     #[sea_orm(unique)]
     pub invitation_token_id: String,
     pub token_expires_at: DateTimeUtc,
     pub accepted_at: Option<DateTimeUtc>,
     pub status: StaffInvitationStatus,
-    pub created_by_actor_id: ActorPrimaryId,
-    pub updated_by_actor_id: Option<ActorPrimaryId>,
+    pub created_by_actor_id: PrimaryId,
+    pub updated_by_actor_id: Option<PrimaryId>,
     pub created_at: DateTimeUtc,
     pub updated_at: DateTimeUtc,
 }

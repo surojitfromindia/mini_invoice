@@ -1,10 +1,7 @@
 use std::collections::HashSet;
 
 use crate::app_state::AppState;
-use crate::entity::{
-    ActorPrimaryId, ClientAppPrimaryId, OrganizationPrimaryId, StaffPrimaryId, StaffRolePrimaryId,
-    UserPrimaryId,
-};
+use crate::entity::PrimaryId;
 use crate::errors::app_error::AppError;
 #[derive(Clone)]
 pub struct ServiceContext {
@@ -22,14 +19,14 @@ impl ServiceContext {
         }
     }
 
-    pub fn get_actor_id(&self) -> Result<ActorPrimaryId, AppError> {
+    pub fn get_actor_id(&self) -> Result<PrimaryId, AppError> {
         if let Some(auth) = &self.auth {
             return Ok(auth.actor_id);
         }
         Err(AppError::ActorIdNotFound)
     }
 
-    pub fn get_user_id(&self) -> Result<UserPrimaryId, AppError> {
+    pub fn get_user_id(&self) -> Result<PrimaryId, AppError> {
         if let Some(auth) = &self.auth {
             if let Some(user_id) = auth.user_id {
                 return Ok(user_id);
@@ -38,7 +35,7 @@ impl ServiceContext {
         Err(AppError::UserIdNotFound)
     }
 
-    pub fn get_organization_id(&self) -> Result<OrganizationPrimaryId, AppError> {
+    pub fn get_organization_id(&self) -> Result<PrimaryId, AppError> {
         if let Some(auth) = &self.auth {
             if let Some(organization_id) = auth.organization_id {
                 return Ok(organization_id);
@@ -69,18 +66,18 @@ pub struct RequestContext {
 
 #[derive(Debug, Clone)]
 pub struct AuthContext {
-    pub actor_id: ActorPrimaryId,
-    pub user_id: Option<UserPrimaryId>,
-    pub client_app_id: Option<ClientAppPrimaryId>,
-    pub organization_id: Option<OrganizationPrimaryId>,
+    pub actor_id: PrimaryId,
+    pub user_id: Option<PrimaryId>,
+    pub client_app_id: Option<PrimaryId>,
+    pub organization_id: Option<PrimaryId>,
     pub organization_staff: Option<OrganizationStaffAccess>,
 }
 
 #[derive(Debug, Clone)]
 pub struct OrganizationStaffAccess {
-    pub staff_id: StaffPrimaryId,
-    pub organization_id: OrganizationPrimaryId,
-    pub role_id: StaffRolePrimaryId,
+    pub staff_id: PrimaryId,
+    pub organization_id: PrimaryId,
+    pub role_id: PrimaryId,
     pub role_public_id: String,
     pub permission_codes: Vec<String>,
     pub permission_code_set: HashSet<String>,

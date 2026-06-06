@@ -1,4 +1,4 @@
-use crate::entity::{ActorPrimaryId, OrganizationPrimaryId, PublicId, UnitPrimaryId};
+use crate::entity::{PrimaryId, PublicId};
 use sea_orm::entity::prelude::*;
 
 #[derive(Debug, Clone, PartialEq, EnumIter, DeriveActiveEnum)]
@@ -15,9 +15,9 @@ pub enum UnitStatus {
 #[sea_orm(table_name = "organization_units")]
 pub struct Model {
     #[sea_orm(primary_key)]
-    pub id: UnitPrimaryId,
+    pub id: PrimaryId,
     #[sea_orm(unique_key = "org_unit_code")]
-    pub organization_id: OrganizationPrimaryId,
+    pub organization_id: PrimaryId,
     #[sea_orm(unique)]
     pub public_id: PublicId,
     #[sea_orm(unique_key = "org_unit_code")]
@@ -29,8 +29,8 @@ pub struct Model {
     pub is_system_unit: bool,
     pub is_active: bool,
     pub status: UnitStatus,
-    pub created_by_actor_id: ActorPrimaryId,
-    pub updated_by_actor_id: Option<ActorPrimaryId>,
+    pub created_by_actor_id: PrimaryId,
+    pub updated_by_actor_id: Option<PrimaryId>,
     pub created_at: DateTimeUtc,
     pub updated_at: DateTimeUtc,
 }

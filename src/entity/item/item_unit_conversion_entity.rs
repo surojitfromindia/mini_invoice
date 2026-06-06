@@ -1,7 +1,4 @@
-use crate::entity::{
-    ActorPrimaryId, ItemPrimaryId, OrganizationPrimaryId, PublicId, UnitConversionPrimaryId,
-    UnitPrimaryId,
-};
+use crate::entity::{PrimaryId, PublicId};
 use sea_orm::entity::prelude::*;
 
 #[derive(Debug, Clone, PartialEq, EnumIter, DeriveActiveEnum)]
@@ -41,25 +38,25 @@ pub enum ItemUnitConversionStatus {
 #[sea_orm(table_name = "item_unit_conversions")]
 pub struct Model {
     #[sea_orm(primary_key)]
-    pub id: UnitConversionPrimaryId,
+    pub id: PrimaryId,
     #[sea_orm(unique_key = "item_unit_conversion_pair")]
-    pub organization_id: OrganizationPrimaryId,
+    pub organization_id: PrimaryId,
     #[sea_orm(unique)]
     pub public_id: PublicId,
     #[sea_orm(unique_key = "item_unit_conversion_pair")]
-    pub item_id: ItemPrimaryId,
+    pub item_id: PrimaryId,
     #[sea_orm(unique_key = "item_unit_conversion_pair")]
-    pub from_unit_id: UnitPrimaryId,
+    pub from_unit_id: PrimaryId,
     #[sea_orm(unique_key = "item_unit_conversion_pair")]
-    pub to_unit_id: UnitPrimaryId,
+    pub to_unit_id: PrimaryId,
     pub conversion_rate: Decimal,
     pub quantity_precision: i16,
     pub rounding_mode: ConversionRoundingMode,
     pub is_active: bool,
     pub status: ItemUnitConversionStatus,
     pub note: Option<String>,
-    pub created_by_actor_id: ActorPrimaryId,
-    pub updated_by_actor_id: Option<ActorPrimaryId>,
+    pub created_by_actor_id: PrimaryId,
+    pub updated_by_actor_id: Option<PrimaryId>,
     pub created_at: DateTimeUtc,
     pub updated_at: DateTimeUtc,
 }

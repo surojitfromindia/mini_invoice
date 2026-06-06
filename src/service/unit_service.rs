@@ -2,8 +2,8 @@ use std::collections::HashSet;
 
 use sea_orm::{ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter, Set};
 
+use crate::entity::PrimaryId;
 use crate::entity::item::unit_entity::{self as Unit};
-use crate::entity::{ActorPrimaryId, OrganizationPrimaryId};
 use crate::errors::app_error::AppError;
 use crate::utils::date_helpers::DateHelper;
 use crate::utils::id_generator::IdGenerator;
@@ -22,8 +22,8 @@ impl UnitService {
     // immediately without manually defining the most common units first.
     pub async fn seed_default_units_for_organization(
         db_transaction: &impl ConnectionTrait,
-        actor_id: ActorPrimaryId,
-        organization_id: OrganizationPrimaryId,
+        actor_id: PrimaryId,
+        organization_id: PrimaryId,
     ) -> Result<(), AppError> {
         let existing_codes: HashSet<String> = Unit::Entity::find()
             .filter(Unit::Column::OrganizationId.eq(organization_id))

@@ -1,4 +1,4 @@
-use crate::entity::{ActorPrimaryId, OrganizationPrimaryId, PublicId};
+use crate::entity::{PrimaryId, PublicId};
 use sea_orm::entity::prelude::*;
 
 // Branches need an inactive lifecycle state in addition to soft deletion so the
@@ -19,16 +19,16 @@ pub enum BranchStatus {
 #[sea_orm(table_name = "organization_branches")]
 pub struct Model {
     #[sea_orm(primary_key)]
-    pub id: i32,
-    pub organization_id: OrganizationPrimaryId,
+    pub id: PrimaryId,
+    pub organization_id: PrimaryId,
     #[sea_orm(unique)]
     pub public_id: PublicId,
     pub name_primary: String,
     pub name_secondary: Option<String>,
     pub is_primary: bool,
     pub status: BranchStatus,
-    pub created_by_actor_id: ActorPrimaryId,
-    pub updated_by_actor_id: Option<ActorPrimaryId>,
+    pub created_by_actor_id: PrimaryId,
+    pub updated_by_actor_id: Option<PrimaryId>,
     pub created_at: DateTimeUtc,
     pub updated_at: DateTimeUtc,
 }

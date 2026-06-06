@@ -4,7 +4,7 @@ use crate::entity::organization::{
 use crate::entity::staff::staff_entity::{self as Staff, StaffStatus};
 use crate::entity::user_entity::{self as User, UserModel, UserStatus};
 
-use crate::entity::{PublicId, UserPrimaryId};
+use crate::entity::{PrimaryId, PublicId};
 use crate::errors::app_error::AppError;
 use crate::errors::organization_service_errors::OrgServiceError;
 use crate::errors::user_service_errors::UserServiceError;
@@ -125,7 +125,7 @@ impl UserService {
 
     async fn get_default_organization_profile(
         ctx: &ServiceContext,
-        user_id: UserPrimaryId,
+        user_id: PrimaryId,
     ) -> Result<Option<CurrentUserOrganization>, AppError> {
         let staff = Staff::Entity::find()
             .filter(Staff::COLUMN.user_id.eq(user_id))
@@ -186,7 +186,7 @@ impl UserService {
     pub async fn get_user_id_by_email(
         ctx: &ServiceContext,
         email: &String,
-    ) -> Result<(i32, PublicId), AppError> {
+    ) -> Result<(PrimaryId, PublicId), AppError> {
         let user = User::Entity::find_by_email(email.clone())
             .one(&ctx.app_state.primary_read_replica)
             .await
@@ -197,7 +197,7 @@ impl UserService {
 
     pub async fn get_user_by_id(
         ctx: &ServiceContext,
-        id: UserPrimaryId,
+        id: PrimaryId,
     ) -> Result<UserModel, AppError> {
         let user = User::Entity::find_by_id(id)
             .one(&ctx.app_state.primary_read_replica)

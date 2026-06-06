@@ -10,8 +10,4 @@ mod common_types;
 pub mod organization;
 pub mod staff;
 
-pub use common_types::{
-    ActorPrimaryId, BranchPrimaryId, ClientAppPrimaryId, ItemPrimaryId, OrganizationPrimaryId,
-    PublicId, StaffInvitationPrimaryId, StaffPrimaryId, StaffRolePrimaryId,
-    UnitConversionPrimaryId, UnitPrimaryId, UserPrimaryId,
-};
+pub use common_types::{PrimaryId, PublicId};

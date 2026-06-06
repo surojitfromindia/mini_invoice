@@ -7,7 +7,7 @@ use sea_orm::{
 use crate::db::listing::PageListResult;
 use crate::db::listing::{execute_page_query, validate_page_pagination};
 use crate::entity::item::item_entity::{self as Item, ItemStatus, ItemType, ItemUsage};
-use crate::entity::{PublicId, UnitPrimaryId};
+use crate::entity::{PrimaryId, PublicId};
 use crate::errors::app_error::AppError;
 use crate::service::service_context::ServiceContext;
 use crate::utils::date_helpers::DateHelper;
@@ -22,9 +22,9 @@ pub struct CreateItemInput {
     pub description: Option<String>,
     pub item_type: ItemType,
     pub item_usage: ItemUsage,
-    pub base_unit_id: UnitPrimaryId,
-    pub purchase_unit_id: Option<UnitPrimaryId>,
-    pub sales_unit_id: Option<UnitPrimaryId>,
+    pub base_unit_id: PrimaryId,
+    pub purchase_unit_id: Option<PrimaryId>,
+    pub sales_unit_id: Option<PrimaryId>,
     pub default_purchase_price: Option<Decimal>,
     pub default_sales_price: Option<Decimal>,
     pub track_inventory: bool,
@@ -141,7 +141,7 @@ impl ItemService {
     }
 
     fn build_item_list_query(
-        organization_id: i32,
+        organization_id: PrimaryId,
         name: Option<&str>,
         sku: Option<&str>,
         status: Option<ItemStatus>,

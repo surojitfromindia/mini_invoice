@@ -1,6 +1,6 @@
 use sea_orm::ConnectionTrait;
 
-use crate::entity::OrganizationPrimaryId;
+use crate::entity::PrimaryId;
 use crate::errors::app_error::AppError;
 use crate::service::staff_service::CreateStaffInvitationInput;
 
@@ -21,7 +21,7 @@ impl StaffPayloadResolver {
     // internal foreign keys expected by the service layer.
     pub async fn create_staff_invitation(
         db_transaction: &impl ConnectionTrait,
-        organization_id: OrganizationPrimaryId,
+        organization_id: PrimaryId,
         payload: CreateStaffInvitationResolutionInput,
     ) -> Result<CreateStaffInvitationInput, AppError> {
         let branch_ids = PublicIdResolver::branch_ids(

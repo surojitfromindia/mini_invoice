@@ -2,8 +2,8 @@ use sea_orm::{ActiveModelTrait, ConnectionTrait, Set};
 
 use crate::auth::permission::{Permission, normalize_permission_codes, serialize_permission_codes};
 use crate::entity::staff::staff_role_entity as StaffRole;
-use crate::entity::{ActorPrimaryId, OrganizationPrimaryId, PublicId};
 use crate::entity::staff::staff_role_entity::StaffRoleStatus;
+use crate::entity::{PrimaryId, PublicId};
 use crate::errors::app_error::AppError;
 use crate::service::service_context::ServiceContext;
 use crate::utils::date_helpers::DateHelper;
@@ -18,7 +18,7 @@ pub struct CreateStaffRoleInput {
 }
 
 pub struct DefaultOrganizationRoles {
-    pub owner_role_id: i32,
+    pub owner_role_id: PrimaryId,
 }
 
 impl StaffRoleService {
@@ -45,8 +45,8 @@ impl StaffRoleService {
 
     pub async fn seed_default_roles(
         db_transaction: &impl ConnectionTrait,
-        actor_id: ActorPrimaryId,
-        organization_id: OrganizationPrimaryId,
+        actor_id: PrimaryId,
+        organization_id: PrimaryId,
     ) -> Result<DefaultOrganizationRoles, AppError> {
         // Bootstrap a standard role set per organization so authorization can
         // stay data-driven while new organizations still start in a usable state.
@@ -116,8 +116,8 @@ impl StaffRoleService {
 
     async fn create_role(
         db_transaction: &impl ConnectionTrait,
-        actor_id: ActorPrimaryId,
-        organization_id: OrganizationPrimaryId,
+        actor_id: PrimaryId,
+        organization_id: PrimaryId,
         name_primary: String,
         name_secondary: Option<String>,
         permission_codes: &[String],
@@ -125,7 +125,7 @@ impl StaffRoleService {
     ) -> Result<StaffRole::Model, AppError> {
         let now = DateHelper::now().value();
         StaffRole::ActiveModel {
-            status : Set(StaffRoleStatus::Active),
+            status: Set(StaffRoleStatus::Active),
             organization_id: Set(organization_id),
             public_id: Set(IdGenerator::generate_general_id()),
             name_primary: Set(name_primary),

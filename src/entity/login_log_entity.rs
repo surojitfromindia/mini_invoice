@@ -1,3 +1,4 @@
+use crate::entity::PrimaryId;
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -41,8 +42,8 @@ pub struct RequestContext {
 #[sea_orm(table_name = "login_logs")]
 pub struct Model {
     #[sea_orm(primary_key)]
-    pub id: i32,
-    pub user_id: Option<i32>,
+    pub id: PrimaryId,
+    pub user_id: Option<PrimaryId>,
     pub identifier: String, // email string.
     pub created_at: DateTimeUtc,
     pub event_type: SignInLogEventType,

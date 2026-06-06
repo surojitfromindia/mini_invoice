@@ -1,4 +1,4 @@
-use crate::entity::PublicId;
+use crate::entity::{PrimaryId, PublicId};
 use sea_orm::entity::prelude::*;
 
 #[derive(Debug, Default, Clone, PartialEq, EnumIter, DeriveActiveEnum)]
@@ -16,7 +16,7 @@ pub enum UserStatus {
 #[sea_orm(table_name = "users")]
 pub struct Model {
     #[sea_orm(primary_key)]
-    pub id: i32,
+    pub id: PrimaryId,
     #[sea_orm(unique)]
     pub public_id: PublicId,
     pub first_name: String,

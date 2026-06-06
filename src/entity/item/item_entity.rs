@@ -1,6 +1,4 @@
-use crate::entity::{
-    ActorPrimaryId, ItemPrimaryId, OrganizationPrimaryId, PublicId, UnitPrimaryId,
-};
+use crate::entity::{PrimaryId, PublicId};
 use sea_orm::entity::prelude::*;
 
 #[derive(Debug, Clone, PartialEq, EnumIter, DeriveActiveEnum)]
@@ -44,9 +42,9 @@ pub enum ItemStatus {
 #[sea_orm(table_name = "organization_items")]
 pub struct Model {
     #[sea_orm(primary_key)]
-    pub id: ItemPrimaryId,
+    pub id: PrimaryId,
     #[sea_orm(unique_key = "org_item_sku", unique_key = "org_item_barcode")]
-    pub organization_id: OrganizationPrimaryId,
+    pub organization_id: PrimaryId,
     #[sea_orm(unique)]
     pub public_id: PublicId,
     #[sea_orm(unique_key = "org_item_sku")]
@@ -58,17 +56,17 @@ pub struct Model {
     pub description: Option<String>,
     pub item_type: ItemType,
     pub item_usage: ItemUsage,
-    pub base_unit_id: UnitPrimaryId,
-    pub purchase_unit_id: Option<UnitPrimaryId>,
-    pub sales_unit_id: Option<UnitPrimaryId>,
+    pub base_unit_id: PrimaryId,
+    pub purchase_unit_id: Option<PrimaryId>,
+    pub sales_unit_id: Option<PrimaryId>,
     pub default_purchase_price: Option<Decimal>,
     pub default_sales_price: Option<Decimal>,
     pub track_inventory: bool,
     pub allow_negative_stock: bool,
     pub reorder_level: Option<Decimal>,
     pub status: ItemStatus,
-    pub created_by_actor_id: ActorPrimaryId,
-    pub updated_by_actor_id: Option<ActorPrimaryId>,
+    pub created_by_actor_id: PrimaryId,
+    pub updated_by_actor_id: Option<PrimaryId>,
     pub created_at: DateTimeUtc,
     pub updated_at: DateTimeUtc,
 }
