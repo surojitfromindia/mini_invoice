@@ -25,6 +25,8 @@ use sea_orm::{
     ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseTransaction, EntityTrait, QueryFilter,
     Set, TransactionTrait,
 };
+use crate::entity::staff::staff_branch_entity::StaffBranchStatus;
+use crate::entity::staff::staff_invitation_branch_entity::StaffInvitationBranchStatus;
 
 pub struct StaffService;
 
@@ -338,6 +340,7 @@ impl StaffService {
             }
 
             StaffInvitationBranch::ActiveModel {
+                status : Set(StaffInvitationBranchStatus::Active),
                 staff_invitation_id: Set(invitation_id),
                 branch_id: Set(branch_id),
                 created_by_actor_id: Set(actor_id),
@@ -373,6 +376,7 @@ impl StaffService {
             }
 
             StaffBranch::ActiveModel {
+                status : Set(StaffBranchStatus::Active),
                 staff_id: Set(staff_id),
                 branch_id: Set(branch_id),
                 created_by_actor_id: Set(actor_id),

@@ -18,6 +18,15 @@ pub enum SignInLogEventType {
     RefreshToken,
 }
 
+#[derive(Debug, Clone, PartialEq, EnumIter, DeriveActiveEnum)]
+#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "login_log_status")]
+pub enum LoginLogStatus {
+    #[sea_orm(string_value = "active")]
+    Active,
+    #[sea_orm(string_value = "deleted")]
+    Deleted,
+}
+
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, FromJsonQueryResult)]
 pub struct RequestContext {
     pub ip_address: Option<String>,
@@ -37,6 +46,7 @@ pub struct Model {
     pub identifier: String, // email string.
     pub created_at: DateTimeUtc,
     pub event_type: SignInLogEventType,
+    pub status: LoginLogStatus,
     pub request_context: RequestContext,
 }
 impl ActiveModelBehavior for ActiveModel {}

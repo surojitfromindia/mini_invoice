@@ -6,7 +6,7 @@ use sea_orm::{
 
 use crate::db::listing::PageListResult;
 use crate::db::listing::{execute_page_query, validate_page_pagination};
-use crate::entity::item::item_entity::{self as Item, ItemType};
+use crate::entity::item::item_entity::{self as Item, ItemStatus, ItemType, ItemUsage};
 use crate::entity::{PublicId, UnitPrimaryId};
 use crate::errors::app_error::AppError;
 use crate::service::service_context::ServiceContext;
@@ -21,15 +21,16 @@ pub struct CreateItemInput {
     pub name_secondary: Option<String>,
     pub description: Option<String>,
     pub item_type: ItemType,
+    pub item_usage: ItemUsage,
     pub base_unit_id: UnitPrimaryId,
-    pub purchase_unit_id: UnitPrimaryId,
-    pub sales_unit_id: UnitPrimaryId,
-    pub default_purchase_price: Decimal,
-    pub default_sales_price: Decimal,
+    pub purchase_unit_id: Option<UnitPrimaryId>,
+    pub sales_unit_id: Option<UnitPrimaryId>,
+    pub default_purchase_price: Option<Decimal>,
+    pub default_sales_price: Option<Decimal>,
     pub track_inventory: bool,
     pub allow_negative_stock: bool,
     pub reorder_level: Option<Decimal>,
-    pub is_active: Option<bool>,
+    pub status: Option<ItemStatus>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -50,7 +51,7 @@ pub struct ItemListPageInput {
     pub per_page: u64,
     pub name: Option<String>,
     pub sku: Option<String>,
-    pub is_active: Option<bool>,
+    pub status: Option<ItemStatus>,
     pub item_type: Option<ItemType>,
     pub sort: Option<ItemSortField>,
     pub direction: Option<SortDirection>,
@@ -64,10 +65,11 @@ pub struct ItemListItem {
     pub name_primary: String,
     pub name_secondary: Option<String>,
     pub item_type: ItemType,
-    pub default_purchase_price: Decimal,
-    pub default_sales_price: Decimal,
+    pub item_usage: ItemUsage,
+    pub default_purchase_price: Option<Decimal>,
+    pub default_sales_price: Option<Decimal>,
     pub track_inventory: bool,
-    pub is_active: bool,
+    pub status: ItemStatus,
 }
 
 pub struct ItemService;
@@ -92,6 +94,7 @@ impl ItemService {
             name_secondary: Set(payload.name_secondary),
             description: Set(payload.description),
             item_type: Set(payload.item_type),
+            item_usage: Set(payload.item_usage),
             base_unit_id: Set(payload.base_unit_id),
             purchase_unit_id: Set(payload.purchase_unit_id),
             sales_unit_id: Set(payload.sales_unit_id),
@@ -100,7 +103,7 @@ impl ItemService {
             track_inventory: Set(payload.track_inventory),
             allow_negative_stock: Set(payload.allow_negative_stock),
             reorder_level: Set(payload.reorder_level),
-            is_active: Set(payload.is_active.unwrap_or(true)),
+            status: Set(ItemStatus::Active),
             created_by_actor_id: Set(actor_id),
             updated_by_actor_id: Set(None),
             created_at: Set(now),
@@ -128,7 +131,7 @@ impl ItemService {
             organization_id,
             input.name.as_deref(),
             input.sku.as_deref(),
-            input.is_active,
+            input.status,
             input.item_type,
         );
         let query = Self::apply_page_sort(query, sort_field, sort_direction);
@@ -141,7 +144,7 @@ impl ItemService {
         organization_id: i32,
         name: Option<&str>,
         sku: Option<&str>,
-        is_active: Option<bool>,
+        status: Option<ItemStatus>,
         item_type: Option<ItemType>,
     ) -> sea_orm::Select<Item::Entity> {
         let mut query =
@@ -155,8 +158,10 @@ impl ItemService {
             query = query.filter(Item::Column::Sku.contains(sku));
         }
 
-        if let Some(is_active) = is_active {
-            query = query.filter(Item::Column::IsActive.eq(is_active));
+        if let Some(status) = status {
+            query = query.filter(Item::Column::Status.eq(status));
+        } else {
+            query = query.filter(Item::Column::Status.ne(ItemStatus::Deleted));
         }
 
         if let Some(item_type) = item_type {
@@ -205,9 +210,10 @@ impl ItemService {
             .column(Item::Column::NamePrimary)
             .column(Item::Column::NameSecondary)
             .column(Item::Column::ItemType)
+            .column(Item::Column::ItemUsage)
             .column(Item::Column::DefaultPurchasePrice)
             .column(Item::Column::DefaultSalesPrice)
             .column(Item::Column::TrackInventory)
-            .column(Item::Column::IsActive)
+            .column(Item::Column::Status)
     }
 }

@@ -15,6 +15,8 @@ use crate::{
     service::unit_service::UnitService,
     utils::{date_helpers::DateHelper, id_generator::IdGenerator},
 };
+use crate::entity::organization::organization_entity::OrganizationStatus;
+use crate::entity::organization::organization_meta_entity::OrganizationMetaStatus;
 
 pub struct CreateOrganizationInput {
     pub name_primary: String,
@@ -55,6 +57,7 @@ impl OrganizationService {
         let meta_payload = CreateOrganizationMeta::from(&payload);
 
         let organization_active_model = Organization::ActiveModel {
+            status : Set(OrganizationStatus::Active),
             prime_user_id: Set(user_id),
             public_id: Set(public_id),
             name_primary: Set(payload.name_primary),
@@ -128,6 +131,7 @@ impl OrganizationService {
     ) -> Result<(), AppError> {
         let now = DateHelper::now().value();
         let organization_meta_active_model = OrganizationMeta::ActiveModel {
+            status : Set(OrganizationMetaStatus::Active),
             organization_id: Set(organization_id),
             country_iso_code: Set(payload.country_iso_code),
             currency_iso_code: Set(payload.currency_iso_code),

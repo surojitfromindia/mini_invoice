@@ -1,6 +1,15 @@
 use crate::entity::{ActorPrimaryId, OrganizationPrimaryId, PublicId, UnitPrimaryId};
 use sea_orm::entity::prelude::*;
 
+#[derive(Debug, Clone, PartialEq, EnumIter, DeriveActiveEnum)]
+#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "unit_status")]
+pub enum UnitStatus {
+    #[sea_orm(string_value = "active")]
+    Active,
+    #[sea_orm(string_value = "deleted")]
+    Deleted,
+}
+
 #[sea_orm::model]
 #[derive(Debug, Clone, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "organization_units")]
@@ -19,6 +28,7 @@ pub struct Model {
     pub decimal_places: i16,
     pub is_system_unit: bool,
     pub is_active: bool,
+    pub status: UnitStatus,
     pub created_by_actor_id: ActorPrimaryId,
     pub updated_by_actor_id: Option<ActorPrimaryId>,
     pub created_at: DateTimeUtc,

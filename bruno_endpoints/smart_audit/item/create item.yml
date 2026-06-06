@@ -15,16 +15,17 @@ http:
         "namePrimary": "Milk 1L",
         "nameSecondary": "Full Cream",
         "description": "Seeded sample item",
-        "itemType": "inventory",
+        "itemType": "product",
+        "itemUsage": "both",
         "baseUnitPublicId": "2C68214648E8",
-        "purchaseUnitPublicId": "2C68214648E8",
+        "purchaseUnitPublicId": null,
         "salesUnitPublicId": "2C68214648E8",
-        "defaultPurchasePrice": "45.00",
+        "defaultPurchasePrice": null,
         "defaultSalesPrice": "52.00",
         "trackInventory": true,
         "allowNegativeStock": false,
         "reorderLevel": "10.00",
-        "isActive": true
+        "status": "active"
       }
   auth: inherit
 

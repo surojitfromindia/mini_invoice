@@ -1,6 +1,19 @@
 use crate::entity::{ActorPrimaryId, OrganizationPrimaryId, PublicId};
 use sea_orm::entity::prelude::*;
 
+// Branches need an inactive lifecycle state in addition to soft deletion so the
+// organization can temporarily stop using a branch without losing its history.
+#[derive(Debug, Clone, PartialEq, EnumIter, DeriveActiveEnum)]
+#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "branch_status")]
+pub enum BranchStatus {
+    #[sea_orm(string_value = "active")]
+    Active,
+    #[sea_orm(string_value = "inactive")]
+    Inactive,
+    #[sea_orm(string_value = "deleted")]
+    Deleted,
+}
+
 #[sea_orm::model]
 #[derive(Debug, Clone, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "organization_branches")]
@@ -13,6 +26,7 @@ pub struct Model {
     pub name_primary: String,
     pub name_secondary: Option<String>,
     pub is_primary: bool,
+    pub status: BranchStatus,
     pub created_by_actor_id: ActorPrimaryId,
     pub updated_by_actor_id: Option<ActorPrimaryId>,
     pub created_at: DateTimeUtc,

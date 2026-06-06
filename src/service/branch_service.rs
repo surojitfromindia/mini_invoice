@@ -6,7 +6,7 @@ use sea_orm::{
 
 use crate::db::listing::PageListResult;
 use crate::db::listing::{execute_page_query, validate_page_pagination};
-use crate::entity::organization::branch_entity::BranchModel;
+use crate::entity::organization::branch_entity::{BranchModel, BranchStatus};
 use crate::entity::organization::{
     branch_entity as Branch, organization_meta_entity as OrganizationMeta,
 };
@@ -114,6 +114,7 @@ impl BranchService {
         let should_be_primary = is_primary_requested || existing_branch.is_none();
 
         let branch = Branch::ActiveModel {
+            status: Set(BranchStatus::Active),
             organization_id: Set(organization_id),
             public_id: Set(IdGenerator::generate_general_id()),
             name_primary: Set(name_primary),

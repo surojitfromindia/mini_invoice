@@ -1,5 +1,5 @@
 use crate::db::listing::PageListResult;
-use crate::entity::item::item_entity::ItemType;
+use crate::entity::item::item_entity::{ItemStatus, ItemType, ItemUsage};
 use sea_orm::entity::prelude::Decimal;
 use serde::{Deserialize, Serialize};
 
@@ -9,9 +9,24 @@ use crate::service::item_service::{ItemListItem, ItemListPageInput, ItemSortFiel
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ItemTypeDto {
-    Inventory,
+    Product,
     Service,
-    NonInventory,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ItemUsageDto {
+    Sales,
+    Purchase,
+    Both,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ItemStatusDto {
+    Active,
+    Inactive,
+    Deleted,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -38,15 +53,16 @@ pub struct CreateItemRequestDto {
     pub name_secondary: Option<String>,
     pub description: Option<String>,
     pub item_type: ItemTypeDto,
+    pub item_usage: ItemUsageDto,
     pub base_unit_public_id: String,
-    pub purchase_unit_public_id: String,
-    pub sales_unit_public_id: String,
-    pub default_purchase_price: Decimal,
-    pub default_sales_price: Decimal,
+    pub purchase_unit_public_id: Option<String>,
+    pub sales_unit_public_id: Option<String>,
+    pub default_purchase_price: Option<Decimal>,
+    pub default_sales_price: Option<Decimal>,
     pub track_inventory: bool,
     pub allow_negative_stock: bool,
     pub reorder_level: Option<Decimal>,
-    pub is_active: Option<bool>,
+    pub status: Option<ItemStatusDto>,
 }
 
 pub struct CreateItemResolutionInput {
@@ -56,15 +72,16 @@ pub struct CreateItemResolutionInput {
     pub name_secondary: Option<String>,
     pub description: Option<String>,
     pub item_type: ItemTypeDto,
+    pub item_usage: ItemUsageDto,
     pub base_unit_public_id: String,
-    pub purchase_unit_public_id: String,
-    pub sales_unit_public_id: String,
-    pub default_purchase_price: Decimal,
-    pub default_sales_price: Decimal,
+    pub purchase_unit_public_id: Option<String>,
+    pub sales_unit_public_id: Option<String>,
+    pub default_purchase_price: Option<Decimal>,
+    pub default_sales_price: Option<Decimal>,
     pub track_inventory: bool,
     pub allow_negative_stock: bool,
     pub reorder_level: Option<Decimal>,
-    pub is_active: Option<bool>,
+    pub status: Option<ItemStatusDto>,
 }
 
 impl CreateItemRequestDto {
@@ -76,6 +93,7 @@ impl CreateItemRequestDto {
             name_secondary: self.name_secondary,
             description: self.description,
             item_type: self.item_type,
+            item_usage: self.item_usage,
             base_unit_public_id: self.base_unit_public_id,
             purchase_unit_public_id: self.purchase_unit_public_id,
             sales_unit_public_id: self.sales_unit_public_id,
@@ -84,7 +102,7 @@ impl CreateItemRequestDto {
             track_inventory: self.track_inventory,
             allow_negative_stock: self.allow_negative_stock,
             reorder_level: self.reorder_level,
-            is_active: self.is_active,
+            status: self.status,
         }
     }
 }
@@ -92,17 +110,51 @@ impl CreateItemRequestDto {
 impl ItemTypeDto {
     pub fn into_service_input(self) -> ItemType {
         match self {
-            Self::Inventory => ItemType::Inventory,
+            Self::Product => ItemType::Product,
             Self::Service => ItemType::Service,
-            Self::NonInventory => ItemType::NonInventory,
         }
     }
 
     pub fn from_service_output(item_type: ItemType) -> Self {
         match item_type {
-            ItemType::Inventory => Self::Inventory,
+            ItemType::Product => Self::Product,
             ItemType::Service => Self::Service,
-            ItemType::NonInventory => Self::NonInventory,
+        }
+    }
+}
+
+impl ItemUsageDto {
+    pub fn into_service_input(self) -> ItemUsage {
+        match self {
+            Self::Sales => ItemUsage::Sales,
+            Self::Purchase => ItemUsage::Purchase,
+            Self::Both => ItemUsage::Both,
+        }
+    }
+
+    pub fn from_service_output(item_usage: ItemUsage) -> Self {
+        match item_usage {
+            ItemUsage::Sales => Self::Sales,
+            ItemUsage::Purchase => Self::Purchase,
+            ItemUsage::Both => Self::Both,
+        }
+    }
+}
+
+impl ItemStatusDto {
+    pub fn into_service_input(self) -> ItemStatus {
+        match self {
+            Self::Active => ItemStatus::Active,
+            Self::Inactive => ItemStatus::Inactive,
+            Self::Deleted => ItemStatus::Deleted,
+        }
+    }
+
+    pub fn from_service_output(status: ItemStatus) -> Self {
+        match status {
+            ItemStatus::Active => Self::Active,
+            ItemStatus::Inactive => Self::Inactive,
+            ItemStatus::Deleted => Self::Deleted,
         }
     }
 }
@@ -114,7 +166,7 @@ pub struct ItemListPageQueryDto {
     pub pagination: PagePaginationQuery,
     pub name: Option<String>,
     pub sku: Option<String>,
-    pub is_active: Option<bool>,
+    pub status: Option<ItemStatusDto>,
     pub item_type: Option<ItemTypeDto>,
     pub sort: Option<ItemSortFieldDto>,
     pub direction: Option<SortDirectionDto>,
@@ -127,7 +179,7 @@ impl IntoServiceInput<ItemListPageInput> for ItemListPageQueryDto {
             per_page: self.pagination.per_page,
             name: self.name,
             sku: self.sku,
-            is_active: self.is_active,
+            status: self.status.map(ItemStatusDto::into_service_input),
             item_type: self.item_type.map(ItemTypeDto::into_service_input),
             sort: self.sort.map(|sort| match sort {
                 ItemSortFieldDto::CreatedAt => ItemSortField::CreatedAt,
@@ -151,10 +203,11 @@ pub struct ItemListItemResponseDto {
     pub name_primary: String,
     pub name_secondary: Option<String>,
     pub item_type: ItemTypeDto,
-    pub default_purchase_price: Decimal,
-    pub default_sales_price: Decimal,
+    pub item_usage: ItemUsageDto,
+    pub default_purchase_price: Option<Decimal>,
+    pub default_sales_price: Option<Decimal>,
     pub track_inventory: bool,
-    pub is_active: bool,
+    pub status: ItemStatusDto,
 }
 
 impl ItemListItemResponseDto {
@@ -166,10 +219,11 @@ impl ItemListItemResponseDto {
             name_primary: item.name_primary,
             name_secondary: item.name_secondary,
             item_type: ItemTypeDto::from_service_output(item.item_type),
+            item_usage: ItemUsageDto::from_service_output(item.item_usage),
             default_purchase_price: item.default_purchase_price,
             default_sales_price: item.default_sales_price,
             track_inventory: item.track_inventory,
-            is_active: item.is_active,
+            status: ItemStatusDto::from_service_output(item.status),
         }
     }
 
@@ -190,21 +244,25 @@ mod tests {
             "namePrimary": "Milk",
             "nameSecondary": "Full Cream",
             "description": "Shelf item",
-            "itemType": "nonInventory",
+            "itemType": "product",
+            "itemUsage": "both",
             "baseUnitPublicId": "u_base",
-            "purchaseUnitPublicId": "u_purchase",
+            "purchaseUnitPublicId": null,
             "salesUnitPublicId": "u_sales",
-            "defaultPurchasePrice": "10.50",
+            "defaultPurchasePrice": null,
             "defaultSalesPrice": "12.75",
             "trackInventory": true,
             "allowNegativeStock": false,
             "reorderLevel": "4.00",
-            "isActive": true
+            "status": "inactive"
         }))
         .unwrap();
 
-        assert_eq!(request.item_type, ItemTypeDto::NonInventory);
+        assert_eq!(request.item_type, ItemTypeDto::Product);
+        assert_eq!(request.item_usage, ItemUsageDto::Both);
         assert_eq!(request.base_unit_public_id, "u_base");
+        assert_eq!(request.purchase_unit_public_id, None);
+        assert_eq!(request.status, Some(ItemStatusDto::Inactive));
     }
 
     #[test]
@@ -214,8 +272,8 @@ mod tests {
             "perPage": 20,
             "name": "Milk",
             "sku": "ITEM",
-            "isActive": true,
-            "itemType": "inventory",
+            "status": "active",
+            "itemType": "product",
             "sort": "sku",
             "direction": "asc"
         }))
@@ -225,8 +283,8 @@ mod tests {
         assert_eq!(query.pagination.per_page, 20);
         assert_eq!(query.name.as_deref(), Some("Milk"));
         assert_eq!(query.sku.as_deref(), Some("ITEM"));
-        assert_eq!(query.is_active, Some(true));
-        assert_eq!(query.item_type, Some(ItemTypeDto::Inventory));
+        assert_eq!(query.status, Some(ItemStatusDto::Active));
+        assert_eq!(query.item_type, Some(ItemTypeDto::Product));
         assert_eq!(query.sort, Some(ItemSortFieldDto::Sku));
         assert_eq!(query.direction, Some(SortDirectionDto::Asc));
     }
@@ -239,11 +297,12 @@ mod tests {
             barcode: Some("12345".to_string()),
             name_primary: "Milk".to_string(),
             name_secondary: Some("Full Cream".to_string()),
-            item_type: ItemTypeDto::Inventory,
-            default_purchase_price: "10.50".parse().unwrap(),
-            default_sales_price: "12.75".parse().unwrap(),
+            item_type: ItemTypeDto::Product,
+            item_usage: ItemUsageDto::Both,
+            default_purchase_price: None,
+            default_sales_price: Some("12.75".parse().unwrap()),
             track_inventory: true,
-            is_active: true,
+            status: ItemStatusDto::Inactive,
         };
 
         let json = serde_json::to_value(response).unwrap();
@@ -256,11 +315,12 @@ mod tests {
                 "barcode": "12345",
                 "namePrimary": "Milk",
                 "nameSecondary": "Full Cream",
-                "itemType": "inventory",
-                "defaultPurchasePrice": "10.50",
+                "itemType": "product",
+                "itemUsage": "both",
+                "defaultPurchasePrice": null,
                 "defaultSalesPrice": "12.75",
                 "trackInventory": true,
-                "isActive": true
+                "status": "inactive"
             })
         );
     }

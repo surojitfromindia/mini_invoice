@@ -1,4 +1,4 @@
-use crate::entity::login_log_entity::{self as entity, RequestContext, SignInLogEventType};
+use crate::entity::login_log_entity::{self as entity, LoginLogStatus, RequestContext, SignInLogEventType};
 use crate::errors::app_error::AppError;
 use crate::service::service_context::ServiceContext;
 use crate::utils::date_helpers::DateHelper;
@@ -16,6 +16,7 @@ impl LoginLogsService {
     ) -> Result<(), AppError> {
         let now = DateHelper::now().value();
         let login_log = entity::ActiveModel {
+            status: Set(LoginLogStatus::Active),
             user_id: Set(user_id),
             identifier: Set(identifier),
             created_at: Set(now),

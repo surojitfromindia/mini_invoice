@@ -6,6 +6,8 @@ use sea_orm::entity::prelude::*;
 pub enum StaffStatus {
     #[sea_orm(string_value = "active")]
     Active,
+    #[sea_orm(string_value = "inactive")]
+    Inactive,
     #[sea_orm(string_value = "deleted")]
     Deleted,
 }

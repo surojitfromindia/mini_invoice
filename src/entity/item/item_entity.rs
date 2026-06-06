@@ -6,12 +6,37 @@ use sea_orm::entity::prelude::*;
 #[derive(Debug, Clone, PartialEq, EnumIter, DeriveActiveEnum)]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "item_type")]
 pub enum ItemType {
-    #[sea_orm(string_value = "inventory")]
-    Inventory,
+    #[sea_orm(string_value = "product")]
+    Product,
     #[sea_orm(string_value = "service")]
     Service,
-    #[sea_orm(string_value = "non_inventory")]
-    NonInventory,
+}
+
+// Item usage keeps sellable and purchasable intent explicit without forcing
+// downstream validation rules to infer meaning from unit or price presence.
+#[derive(Debug, Clone, PartialEq, EnumIter, DeriveActiveEnum)]
+#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "item_usage")]
+pub enum ItemUsage {
+    #[sea_orm(string_value = "sales")]
+    Sales,
+    #[sea_orm(string_value = "purchase")]
+    Purchase,
+    #[sea_orm(string_value = "both")]
+    Both,
+}
+
+// Items use a soft-delete status so list endpoints can hide archived records
+// while still allowing future recovery or auditing flows.
+#[derive(Debug, Default, Clone, PartialEq, EnumIter, DeriveActiveEnum)]
+#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "item_status")]
+pub enum ItemStatus {
+    #[default]
+    #[sea_orm(string_value = "active")]
+    Active,
+    #[sea_orm(string_value = "inactive")]
+    Inactive,
+    #[sea_orm(string_value = "deleted")]
+    Deleted,
 }
 
 #[sea_orm::model]
@@ -32,15 +57,16 @@ pub struct Model {
     pub name_secondary: Option<String>,
     pub description: Option<String>,
     pub item_type: ItemType,
+    pub item_usage: ItemUsage,
     pub base_unit_id: UnitPrimaryId,
-    pub purchase_unit_id: UnitPrimaryId,
-    pub sales_unit_id: UnitPrimaryId,
-    pub default_purchase_price: Decimal,
-    pub default_sales_price: Decimal,
+    pub purchase_unit_id: Option<UnitPrimaryId>,
+    pub sales_unit_id: Option<UnitPrimaryId>,
+    pub default_purchase_price: Option<Decimal>,
+    pub default_sales_price: Option<Decimal>,
     pub track_inventory: bool,
     pub allow_negative_stock: bool,
     pub reorder_level: Option<Decimal>,
-    pub is_active: bool,
+    pub status: ItemStatus,
     pub created_by_actor_id: ActorPrimaryId,
     pub updated_by_actor_id: Option<ActorPrimaryId>,
     pub created_at: DateTimeUtc,

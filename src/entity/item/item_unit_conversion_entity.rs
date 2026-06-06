@@ -21,6 +21,19 @@ pub enum ConversionRoundingMode {
     Ceil,
 }
 
+#[derive(Debug, Clone, PartialEq, EnumIter, DeriveActiveEnum)]
+#[sea_orm(
+    rs_type = "String",
+    db_type = "Enum",
+    enum_name = "item_unit_conversion_status"
+)]
+pub enum ItemUnitConversionStatus {
+    #[sea_orm(string_value = "active")]
+    Active,
+    #[sea_orm(string_value = "deleted")]
+    Deleted,
+}
+
 // Item-scoped unit conversions keep packaging math tied to the item instead of
 // pretending every unit pair converts the same way across the organization.
 #[sea_orm::model]
@@ -43,6 +56,7 @@ pub struct Model {
     pub quantity_precision: i16,
     pub rounding_mode: ConversionRoundingMode,
     pub is_active: bool,
+    pub status: ItemUnitConversionStatus,
     pub note: Option<String>,
     pub created_by_actor_id: ActorPrimaryId,
     pub updated_by_actor_id: Option<ActorPrimaryId>,

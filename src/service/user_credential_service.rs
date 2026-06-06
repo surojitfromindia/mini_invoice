@@ -1,5 +1,5 @@
 use crate::config::settings::Settings;
-use crate::entity::user_credentials_entity::{self as UserCredentials};
+use crate::entity::user_credentials_entity::{self as UserCredentials, UserCredentialsStatus};
 use crate::errors::app_error::AppError;
 use crate::errors::user_credential_service_errors::UserCredentialServiceError;
 use crate::service::service_context::ServiceContext;
@@ -26,6 +26,7 @@ impl UserCredentialService {
         let password_hash = PasswordHelpers::hash_login_password(settings, plain_password.into())?;
 
         let user_credential_active_model = UserCredentials::ActiveModel {
+            status: Set(UserCredentialsStatus::Active),
             user_id: Set(user_id),
             password_hash: Set(password_hash),
             refresh_token_hash: Set(None),
