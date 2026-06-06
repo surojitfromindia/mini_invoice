@@ -18,7 +18,7 @@ impl ErrorMetadata for ItemServiceError {
         match self {
             Self::UnitNotFound => ErrorMeta::new(
                 error_codes::ITEM_UNIT_NOT_FOUND,
-                "Unit not found in organization",
+                "Unit not found",
                 HttpErrorCode::NotFound,
             ),
         }

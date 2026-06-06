@@ -1,4 +1,4 @@
-use super::common_types::{PrimaryId, PublicId};
+use super::common_types::{GenericStatus, PrimaryId, PublicId};
 use sea_orm::entity::prelude::*;
 
 #[derive(Debug, Clone, PartialEq, EnumIter, DeriveActiveEnum)]
@@ -12,15 +12,6 @@ pub enum ActorType {
     System,
 }
 
-#[derive(Debug, Clone, PartialEq, EnumIter, DeriveActiveEnum)]
-#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "actor_status")]
-pub enum ActorStatus {
-    #[sea_orm(string_value = "active")]
-    Active,
-    #[sea_orm(string_value = "deleted")]
-    Deleted,
-}
-
 #[sea_orm::model]
 #[derive(Debug, Clone, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "actors")]
@@ -32,7 +23,7 @@ pub struct Model {
     pub client_app_id: Option<PrimaryId>,
     pub public_client_app_id: Option<PublicId>,
     pub actor_type: ActorType,
-    pub status: ActorStatus,
+    pub status: GenericStatus,
     pub created_at: DateTimeUtc,
     pub updated_at: DateTimeUtc,
 }

@@ -1,16 +1,14 @@
 use crate::config::settings::Settings;
-use crate::entity::PrimaryId;
 use crate::entity::organization::organization_entity as Organization;
 use crate::entity::organization::organization_entity::OrganizationModel;
 use crate::entity::staff::staff_branch_entity as StaffBranch;
-use crate::entity::staff::staff_branch_entity::StaffBranchStatus;
 use crate::entity::staff::staff_entity::{self as Staff, StaffStatus};
 use crate::entity::staff::staff_invitation_branch_entity as StaffInvitationBranch;
-use crate::entity::staff::staff_invitation_branch_entity::StaffInvitationBranchStatus;
 use crate::entity::staff::staff_invitation_entity::{
     self as StaffInvitation, StaffInvitationStatus,
 };
 use crate::entity::user_entity::UserModel;
+use crate::entity::{GenericStatus, PrimaryId};
 use crate::errors::app_error::AppError;
 use crate::errors::staff_service_errors::StaffServiceError;
 use crate::service::service_context::ServiceContext;
@@ -337,7 +335,7 @@ impl StaffService {
             }
 
             StaffInvitationBranch::ActiveModel {
-                status: Set(StaffInvitationBranchStatus::Active),
+                status: Set(GenericStatus::Active),
                 staff_invitation_id: Set(invitation_id),
                 branch_id: Set(branch_id),
                 created_by_actor_id: Set(actor_id),
@@ -373,7 +371,7 @@ impl StaffService {
             }
 
             StaffBranch::ActiveModel {
-                status: Set(StaffBranchStatus::Active),
+                status: Set(GenericStatus::Active),
                 staff_id: Set(staff_id),
                 branch_id: Set(branch_id),
                 created_by_actor_id: Set(actor_id),

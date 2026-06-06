@@ -1,5 +1,5 @@
-use crate::entity::actor_entity::{self as Actor, ActorStatus, ActorType};
-use crate::entity::{PrimaryId, PublicId};
+use crate::entity::actor_entity::{self as Actor, ActorType};
+use crate::entity::{GenericStatus, PrimaryId, PublicId};
 use crate::errors::app_error::AppError;
 use crate::utils::date_helpers::DateHelper;
 use sea_orm::{ActiveModelTrait, ConnectionTrait, Set};
@@ -14,7 +14,7 @@ impl ActorService {
     ) -> Result<(), AppError> {
         let now = DateHelper::now().value();
         let actor_active_model = Actor::ActiveModel {
-            status: Set(ActorStatus::Active),
+            status: Set(GenericStatus::Active),
             user_id: Set(Some(user_id)),
             public_user_id: Set(Some(public_id)),
             client_app_id: Set(None),
@@ -36,7 +36,7 @@ impl ActorService {
     ) -> Result<(), AppError> {
         let now = DateHelper::now().value();
         let actor_active_model = Actor::ActiveModel {
-            status: Set(ActorStatus::Active),
+            status: Set(GenericStatus::Active),
             user_id: Set(None),
             public_user_id: Set(None),
             client_app_id: Set(Some(client_app_id)),

@@ -9,6 +9,7 @@ use crate::errors::user_credential_service_errors::UserCredentialServiceError;
 use crate::errors::user_service_errors::UserServiceError;
 use sea_orm::DbErr;
 use std::fmt;
+use crate::errors::branch_service_errors::BranchServiceError;
 
 #[derive(Debug)]
 #[allow(dead_code)]
@@ -20,6 +21,7 @@ pub enum AppError {
     Item(ItemServiceError),
     Org(OrgServiceError),
     Staff(StaffServiceError),
+    Branch(BranchServiceError),
     Unauthorized,
     Forbidden { permission: String },
     BadRequest { code: &'static str, message: String },
@@ -39,6 +41,7 @@ impl AppError {
             AppError::Item(data) => data.meta(),
             AppError::Org(data) => data.meta(),
             AppError::Staff(data) => data.meta(),
+            AppError::Branch(data) => data.meta(),
             AppError::Database(data) => data.meta(),
             AppError::Unauthorized => ErrorMeta {
                 code: error_codes::UNAUTHORIZED,

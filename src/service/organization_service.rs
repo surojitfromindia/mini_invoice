@@ -1,7 +1,7 @@
 use sea_orm::{ActiveModelTrait, ConnectionTrait, Set, TransactionTrait};
 
+use crate::entity::GenericStatus;
 use crate::entity::organization::organization_entity::OrganizationStatus;
-use crate::entity::organization::organization_meta_entity::OrganizationMetaStatus;
 use crate::{
     entity::{
         PrimaryId, PublicId,
@@ -131,7 +131,7 @@ impl OrganizationService {
     ) -> Result<(), AppError> {
         let now = DateHelper::now().value();
         let organization_meta_active_model = OrganizationMeta::ActiveModel {
-            status: Set(OrganizationMetaStatus::Active),
+            status: Set(GenericStatus::Active),
             organization_id: Set(organization_id),
             country_iso_code: Set(payload.country_iso_code),
             currency_iso_code: Set(payload.currency_iso_code),

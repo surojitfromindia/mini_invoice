@@ -2,8 +2,7 @@ use sea_orm::{ActiveModelTrait, ConnectionTrait, Set};
 
 use crate::auth::permission::{Permission, normalize_permission_codes, serialize_permission_codes};
 use crate::entity::staff::staff_role_entity as StaffRole;
-use crate::entity::staff::staff_role_entity::StaffRoleStatus;
-use crate::entity::{PrimaryId, PublicId};
+use crate::entity::{GenericStatus, PrimaryId, PublicId};
 use crate::errors::app_error::AppError;
 use crate::service::service_context::ServiceContext;
 use crate::utils::date_helpers::DateHelper;
@@ -125,7 +124,7 @@ impl StaffRoleService {
     ) -> Result<StaffRole::Model, AppError> {
         let now = DateHelper::now().value();
         StaffRole::ActiveModel {
-            status: Set(StaffRoleStatus::Active),
+            status: Set(GenericStatus::Active),
             organization_id: Set(organization_id),
             public_id: Set(IdGenerator::generate_general_id()),
             name_primary: Set(name_primary),

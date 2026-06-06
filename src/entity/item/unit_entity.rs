@@ -1,34 +1,24 @@
-use crate::entity::{PrimaryId, PublicId};
+use crate::entity::{GenericStatus, PrimaryId, PublicId};
 use sea_orm::entity::prelude::*;
-
-#[derive(Debug, Clone, PartialEq, EnumIter, DeriveActiveEnum)]
-#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "unit_status")]
-pub enum UnitStatus {
-    #[sea_orm(string_value = "active")]
-    Active,
-    #[sea_orm(string_value = "deleted")]
-    Deleted,
-}
 
 #[sea_orm::model]
 #[derive(Debug, Clone, PartialEq, DeriveEntityModel)]
-#[sea_orm(table_name = "organization_units")]
+#[sea_orm(table_name = "units")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: PrimaryId,
-    #[sea_orm(unique_key = "org_unit_code")]
+    #[sea_orm(unique_key = "unit_code")]
     pub organization_id: PrimaryId,
     #[sea_orm(unique)]
     pub public_id: PublicId,
-    #[sea_orm(unique_key = "org_unit_code")]
+    #[sea_orm(unique_key = "unit_code")]
     pub code: String,
     pub name_primary: String,
     pub name_secondary: Option<String>,
     pub symbol: Option<String>,
     pub decimal_places: i16,
     pub is_system_unit: bool,
-    pub is_active: bool,
-    pub status: UnitStatus,
+    pub status: GenericStatus,
     pub created_by_actor_id: PrimaryId,
     pub updated_by_actor_id: Option<PrimaryId>,
     pub created_at: DateTimeUtc,

@@ -16,7 +16,7 @@ pub enum BranchStatus {
 
 #[sea_orm::model]
 #[derive(Debug, Clone, PartialEq, DeriveEntityModel)]
-#[sea_orm(table_name = "organization_branches")]
+#[sea_orm(table_name = "branches")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: PrimaryId,

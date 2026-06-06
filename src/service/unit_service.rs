@@ -2,8 +2,8 @@ use std::collections::HashSet;
 
 use sea_orm::{ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter, Set};
 
-use crate::entity::PrimaryId;
 use crate::entity::item::unit_entity::{self as Unit};
+use crate::entity::{GenericStatus, PrimaryId};
 use crate::errors::app_error::AppError;
 use crate::utils::date_helpers::DateHelper;
 use crate::utils::id_generator::IdGenerator;
@@ -49,7 +49,7 @@ impl UnitService {
                 symbol: Set(Some(seed.symbol.to_string())),
                 decimal_places: Set(seed.decimal_places),
                 is_system_unit: Set(true),
-                is_active: Set(true),
+                status: Set(GenericStatus::Active),
                 created_by_actor_id: Set(actor_id),
                 updated_by_actor_id: Set(None),
                 created_at: Set(now),

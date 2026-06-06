@@ -1,4 +1,4 @@
-use crate::entity::PrimaryId;
+use crate::entity::{GenericStatus, PrimaryId};
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -17,15 +17,6 @@ pub enum SignInLogEventType {
     Logout,
     #[sea_orm(string_value = "refresh_token")]
     RefreshToken,
-}
-
-#[derive(Debug, Clone, PartialEq, EnumIter, DeriveActiveEnum)]
-#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "login_log_status")]
-pub enum LoginLogStatus {
-    #[sea_orm(string_value = "active")]
-    Active,
-    #[sea_orm(string_value = "deleted")]
-    Deleted,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, FromJsonQueryResult)]
@@ -47,7 +38,7 @@ pub struct Model {
     pub identifier: String, // email string.
     pub created_at: DateTimeUtc,
     pub event_type: SignInLogEventType,
-    pub status: LoginLogStatus,
+    pub status: GenericStatus,
     pub request_context: RequestContext,
 }
 impl ActiveModelBehavior for ActiveModel {}

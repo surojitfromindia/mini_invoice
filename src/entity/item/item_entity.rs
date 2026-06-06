@@ -39,17 +39,17 @@ pub enum ItemStatus {
 
 #[sea_orm::model]
 #[derive(Debug, Clone, PartialEq, DeriveEntityModel)]
-#[sea_orm(table_name = "organization_items")]
+#[sea_orm(table_name = "items")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: PrimaryId,
-    #[sea_orm(unique_key = "org_item_sku", unique_key = "org_item_barcode")]
+    #[sea_orm(unique_key = "org_item_sku", unique_key = "item_barcode")]
     pub organization_id: PrimaryId,
     #[sea_orm(unique)]
     pub public_id: PublicId,
-    #[sea_orm(unique_key = "org_item_sku")]
+    #[sea_orm(unique_key = "item_sku")]
     pub sku: String,
-    #[sea_orm(unique_key = "org_item_barcode")]
+    #[sea_orm(unique_key = "item_barcode")]
     pub barcode: Option<String>,
     pub name_primary: String,
     pub name_secondary: Option<String>,

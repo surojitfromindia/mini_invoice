@@ -11,4 +11,5 @@ pub mod user_service_errors;
 pub mod staff_service_errors;
 
 pub mod organization_service_errors;
+pub mod branch_service_errors;
 // error code: 100: // error code : 101:

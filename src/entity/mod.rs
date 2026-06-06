@@ -10,4 +10,4 @@ mod common_types;
 pub mod organization;
 pub mod staff;
 
-pub use common_types::{PrimaryId, PublicId};
+pub use common_types::{GenericStatus, PrimaryId, PublicId};
