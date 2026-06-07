@@ -1,5 +1,6 @@
 pub mod auth_dto;
 pub mod branch_dto;
+pub mod coa_dto;
 pub mod common_dto;
 pub mod item_dto;
 pub mod organization_dto;

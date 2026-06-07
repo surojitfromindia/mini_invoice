@@ -12,7 +12,6 @@ impl From<BranchServiceError> for AppError {
     }
 }
 
-
 impl ErrorMetadata for BranchServiceError {
     fn meta(&self) -> ErrorMeta {
         match self {
@@ -21,7 +20,6 @@ impl ErrorMetadata for BranchServiceError {
                 "Branch not found",
                 HttpErrorCode::NotFound,
             ),
-            
         }
     }
 }

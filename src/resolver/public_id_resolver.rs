@@ -12,11 +12,11 @@ use crate::entity::staff::{
 };
 use crate::entity::{PrimaryId, actor_entity as Actor};
 use crate::errors::app_error::AppError;
+use crate::errors::branch_service_errors::BranchServiceError;
 use crate::errors::item_service_errors::ItemServiceError;
 use crate::errors::organization_service_errors::OrgServiceError;
 use crate::errors::staff_service_errors::StaffServiceError;
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
-use crate::errors::branch_service_errors::BranchServiceError;
 
 // Centralizes public-id to internal-id/model resolution so handlers can keep
 // transport-facing ids at the edge and services can operate on trusted DB ids.

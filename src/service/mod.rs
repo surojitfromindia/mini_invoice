@@ -1,6 +1,9 @@
 pub mod actor_service;
 pub mod auth_service;
 pub mod branch_service;
+pub mod coa_seed_catalog;
+pub mod coa_service;
+pub mod coa_template_service;
 pub mod item_service;
 mod login_log_service;
 pub mod organization_service;
@@ -10,6 +13,3 @@ pub mod staff_service;
 pub mod unit_service;
 pub mod user_credential_service;
 pub mod user_service;
-pub mod coa_service;
-pub mod coa_seed_catalog;
-pub mod coa_template_service;

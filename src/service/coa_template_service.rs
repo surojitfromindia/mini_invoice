@@ -66,12 +66,10 @@ impl CoaTemplateService {
             name_primary: Set(template_seed.name_primary.to_string()),
             name_secondary: Set(template_seed.name_secondary.map(str::to_string)),
             description: Set(template_seed.description.map(str::to_string)),
-            country_iso_code: Set(
-                template_seed
-                    .country_iso_code
-                    .unwrap_or(country_iso_code)
-                    .to_string(),
-            ),
+            country_iso_code: Set(template_seed
+                .country_iso_code
+                .unwrap_or(country_iso_code)
+                .to_string()),
             accounting_standard: Set(template_seed.accounting_standard.map(str::to_string)),
             is_default: Set(template_seed.is_default),
             organization_id: Set(organization_id),
@@ -101,8 +99,10 @@ impl CoaTemplateService {
 
         let mut account_ids_by_key: HashMap<String, PrimaryId> = HashMap::new();
         let mut account_ids_by_code: HashMap<String, PrimaryId> = HashMap::new();
-        let seed_by_code: HashMap<&str, &coa_seed_catalog::CoaAccountSeed> =
-            account_seeds.iter().map(|seed| (seed.code.as_str(), seed)).collect();
+        let seed_by_code: HashMap<&str, &coa_seed_catalog::CoaAccountSeed> = account_seeds
+            .iter()
+            .map(|seed| (seed.code.as_str(), seed))
+            .collect();
 
         for account in existing_accounts {
             account_ids_by_code.insert(account.code.clone(), account.id);
@@ -196,14 +196,11 @@ fn resolve_required_key(
     seed_key: &str,
 ) -> Result<PrimaryId, AppError> {
     match key {
-        Some(key) => ids_by_key
-            .get(key)
-            .copied()
-            .ok_or_else(|| {
-                AppError::InternalServer(format!(
-                    "Missing {label} `{key}` while seeding COA row `{seed_key}`"
-                ))
-            }),
+        Some(key) => ids_by_key.get(key).copied().ok_or_else(|| {
+            AppError::InternalServer(format!(
+                "Missing {label} `{key}` while seeding COA row `{seed_key}`"
+            ))
+        }),
         None => Err(AppError::InternalServer(format!(
             "Missing required {label} while seeding COA row `{seed_key}`"
         ))),

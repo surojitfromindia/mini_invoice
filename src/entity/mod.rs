@@ -6,9 +6,9 @@ pub mod user_entity;
 pub mod client_app;
 pub mod item;
 
+pub mod coa;
 mod common_types;
 pub mod organization;
 pub mod staff;
-pub mod coa;
 
 pub use common_types::{GenericStatus, PrimaryId, PublicId};

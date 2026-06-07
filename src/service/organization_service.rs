@@ -11,8 +11,8 @@ use crate::{
     },
     errors::app_error::AppError,
     service::branch_service::BranchService,
-    service::service_context::ServiceContext,
     service::coa_template_service::CoaTemplateService,
+    service::service_context::ServiceContext,
     service::staff_role_service::StaffRoleService,
     service::staff_service::StaffService,
     service::unit_service::UnitService,
@@ -79,7 +79,14 @@ impl OrganizationService {
         Self::create_organization_meta(&txn, actor_id, created_organization.id, meta_payload)
             .await?;
         // create organization related things lik creating default branch, items, units etc.
-        Self::seed_organization_defaults(&txn, ctx, actor_id, created_organization.id, country_iso_code).await?;
+        Self::seed_organization_defaults(
+            &txn,
+            ctx,
+            actor_id,
+            created_organization.id,
+            country_iso_code,
+        )
+        .await?;
 
         txn.commit().await?;
 

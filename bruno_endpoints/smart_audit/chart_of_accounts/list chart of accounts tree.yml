@@ -1,0 +1,19 @@
+info:
+  name: list chart of accounts tree
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{base_url_api_v1}}/chart_of_accounts?view=tree"
+  params:
+    - name: view
+      value: "tree"
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,8 +1,6 @@
 use crate::entity::{GenericStatus, PrimaryId};
 use sea_orm::entity::prelude::*;
 
-
-
 #[sea_orm::model]
 #[derive(Debug, Clone, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "staff_invitation_branches")]

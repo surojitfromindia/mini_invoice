@@ -2,11 +2,7 @@ use crate::entity::{GenericStatus, PrimaryId};
 use sea_orm::entity::prelude::*;
 
 #[derive(Debug, Clone, PartialEq, EnumIter, DeriveActiveEnum)]
-#[sea_orm(
-    rs_type = "String",
-    db_type = "Enum",
-    enum_name = "flag_scope"
-)]
+#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "flag_scope")]
 pub enum FlagScope {
     #[sea_orm(string_value = "self_only")]
     SelfOnly,
