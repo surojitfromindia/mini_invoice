@@ -9,5 +9,6 @@ pub mod item;
 mod common_types;
 pub mod organization;
 pub mod staff;
+pub mod coa;
 
 pub use common_types::{GenericStatus, PrimaryId, PublicId};

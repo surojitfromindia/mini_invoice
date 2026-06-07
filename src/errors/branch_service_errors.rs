@@ -1,7 +1,6 @@
 use crate::errors::app_error::{AppError, HttpErrorCode};
 use crate::errors::error_codes;
 use crate::errors::error_meta::{ErrorMeta, ErrorMetadata};
-use crate::errors::organization_service_errors::OrgServiceError;
 
 #[derive(Debug)]
 pub enum BranchServiceError {

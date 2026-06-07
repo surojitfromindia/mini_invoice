@@ -10,3 +10,6 @@ pub mod staff_service;
 pub mod unit_service;
 pub mod user_credential_service;
 pub mod user_service;
+pub mod coa_service;
+pub mod coa_seed_catalog;
+pub mod coa_template_service;
