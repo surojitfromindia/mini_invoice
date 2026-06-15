@@ -10,6 +10,7 @@ pub mod organization_service;
 pub mod service_context;
 pub mod staff_role_service;
 pub mod staff_service;
+pub mod tree_graph;
 pub mod unit_service;
 pub mod user_credential_service;
 pub mod user_service;

@@ -1,6 +1,7 @@
+use crate::entity::PrimaryId;
 use crate::service::coa_service::{
-    ChartOfAccountFlatItem, ChartOfAccountTreeItem, ChartOfAccountsTemplate,
-    ChartOfAccountsViewResult, CoaViewMode,
+    ChartOfAccountFlatItem, ChartOfAccountItemFields, ChartOfAccountTreeItem,
+    ChartOfAccountsTemplate, ChartOfAccountsViewResult, CoaViewMode,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -49,7 +50,8 @@ pub struct ChartOfAccountsTemplateDto {
 
 #[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct ChartOfAccountFlatItemDto {
+pub struct ChartOfAccountItemDto {
+    pub id: PrimaryId,
     pub public_id: String,
     pub code: String,
     pub name_primary: String,
@@ -58,25 +60,26 @@ pub struct ChartOfAccountFlatItemDto {
     pub level_no: i16,
     pub is_posting: bool,
     pub is_system_account: bool,
+    pub parent_id: Option<PrimaryId>,
     pub parent_public_id: Option<String>,
+    pub account_group_id: Option<PrimaryId>,
     pub account_group_public_id: Option<String>,
+    pub account_type_id: Option<PrimaryId>,
     pub account_type_public_id: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
+pub struct ChartOfAccountFlatItemDto {
+    #[serde(flatten)]
+    pub item: ChartOfAccountItemDto,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct ChartOfAccountTreeItemDto {
-    pub public_id: String,
-    pub code: String,
-    pub name_primary: String,
-    pub name_secondary: Option<String>,
-    pub description: Option<String>,
-    pub level_no: i16,
-    pub is_posting: bool,
-    pub is_system_account: bool,
-    pub parent_public_id: Option<String>,
-    pub account_group_public_id: Option<String>,
-    pub account_type_public_id: Option<String>,
+    #[serde(flatten)]
+    pub item: ChartOfAccountItemDto,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub children: Vec<ChartOfAccountTreeItemDto>,
 }
@@ -111,17 +114,7 @@ impl ChartOfAccountsTemplateDto {
 impl ChartOfAccountFlatItemDto {
     fn from_service_output(account: ChartOfAccountFlatItem) -> Self {
         Self {
-            public_id: account.public_id,
-            code: account.code,
-            name_primary: account.name_primary,
-            name_secondary: account.name_secondary,
-            description: account.description,
-            level_no: account.level_no,
-            is_posting: account.is_posting,
-            is_system_account: account.is_system_account,
-            parent_public_id: account.parent_public_id,
-            account_group_public_id: account.account_group_public_id,
-            account_type_public_id: account.account_type_public_id,
+            item: ChartOfAccountItemDto::from_service_output(account.item),
         }
     }
 }
@@ -129,6 +122,20 @@ impl ChartOfAccountFlatItemDto {
 impl ChartOfAccountTreeItemDto {
     fn from_service_output(account: ChartOfAccountTreeItem) -> Self {
         Self {
+            item: ChartOfAccountItemDto::from_service_output(account.item),
+            children: account
+                .children
+                .into_iter()
+                .map(Self::from_service_output)
+                .collect(),
+        }
+    }
+}
+
+impl ChartOfAccountItemDto {
+    fn from_service_output(account: ChartOfAccountItemFields) -> Self {
+        Self {
+            id: account.id,
             public_id: account.public_id,
             code: account.code,
             name_primary: account.name_primary,
@@ -137,14 +144,12 @@ impl ChartOfAccountTreeItemDto {
             level_no: account.level_no,
             is_posting: account.is_posting,
             is_system_account: account.is_system_account,
+            parent_id: account.parent_id,
             parent_public_id: account.parent_public_id,
+            account_group_id: account.account_group_id,
             account_group_public_id: account.account_group_public_id,
+            account_type_id: account.account_type_id,
             account_type_public_id: account.account_type_public_id,
-            children: account
-                .children
-                .into_iter()
-                .map(Self::from_service_output)
-                .collect(),
         }
     }
 }
@@ -187,5 +192,62 @@ mod tests {
             serde_json::from_value(serde_json::json!({ "view": "flat" })).unwrap();
 
         assert_eq!(query.view, Some(ChartOfAccountsViewModeDto::Flat));
+    }
+
+    #[test]
+    fn chart_of_account_flat_item_keeps_internal_and_public_ids() {
+        let dto = ChartOfAccountFlatItemDto::from_service_output(ChartOfAccountFlatItem {
+            item: ChartOfAccountItemFields {
+                id: 42,
+                public_id: "coa_pub_42".to_string(),
+                code: "1000".to_string(),
+                name_primary: "Cash".to_string(),
+                name_secondary: None,
+                description: None,
+                level_no: 1,
+                is_posting: true,
+                is_system_account: false,
+                parent_id: None,
+                parent_public_id: None,
+                account_group_id: None,
+                account_group_public_id: None,
+                account_type_id: None,
+                account_type_public_id: None,
+            },
+        });
+
+        let value = serde_json::to_value(dto).unwrap();
+
+        assert_eq!(value["id"], 42);
+        assert_eq!(value["publicId"], "coa_pub_42");
+    }
+
+    #[test]
+    fn chart_of_account_tree_item_keeps_internal_and_public_ids() {
+        let dto = ChartOfAccountTreeItemDto::from_service_output(ChartOfAccountTreeItem {
+            item: ChartOfAccountItemFields {
+                id: 7,
+                public_id: "coa_pub_7".to_string(),
+                code: "2000".to_string(),
+                name_primary: "Assets".to_string(),
+                name_secondary: None,
+                description: None,
+                level_no: 1,
+                is_posting: false,
+                is_system_account: true,
+                parent_id: None,
+                parent_public_id: None,
+                account_group_id: None,
+                account_group_public_id: None,
+                account_type_id: None,
+                account_type_public_id: None,
+            },
+            children: vec![],
+        });
+
+        let value = serde_json::to_value(dto).unwrap();
+
+        assert_eq!(value["id"], 7);
+        assert_eq!(value["publicId"], "coa_pub_7");
     }
 }
