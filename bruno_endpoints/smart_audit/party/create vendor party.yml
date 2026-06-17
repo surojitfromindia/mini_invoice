@@ -1,0 +1,78 @@
+info:
+  name: create vendor party
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{base_url_api_v1}}/party"
+  body:
+    type: json
+    data: |-
+      {
+        "code": "VEN-001",
+        "partyType": "vendor",
+        "partyKind": "business",
+        "source": "manual",
+        "displayName": "Metro Supplies",
+        "namePrimary": "Metro Supplies",
+        "nameSecondary": null,
+        "legalName": "Metro Supplies LLP",
+        "phone": "+919700000000",
+        "email": "accounts@metro-supplies.example",
+        "taxNo": "GSTIN987654321",
+        "taxTreatment": "registered",
+        "countryIsoCode": "IN",
+        "currencyIsoCode": "INR",
+        "paymentTermsDays": 15,
+        "creditLimit": null,
+        "allowCredit": false,
+        "notes": "Primary packaging vendor",
+        "accountingProfile": {
+          "defaultSalesAccountPublicId": null,
+          "defaultPurchaseAccountPublicId": null,
+          "defaultReceivableAccountPublicId": null,
+          "defaultPayableAccountPublicId": null,
+          "defaultOutputTaxAccountPublicId": null,
+          "defaultInputTaxAccountPublicId": null
+        },
+        "addresses": [
+          {
+            "addressType": "office",
+            "label": "Office",
+            "line1": "45 Industrial Area",
+            "line2": null,
+            "city": "Kolkata",
+            "stateRegion": "West Bengal",
+            "postalCode": "700091",
+            "countryIsoCode": "IN",
+            "isDefaultBilling": true,
+            "isDefaultShipping": false
+          }
+        ],
+        "contacts": [
+          {
+            "namePrimary": "Priya Shah",
+            "nameSecondary": null,
+            "designation": "Sales Manager",
+            "phone": "+919711111111",
+            "email": "priya@metro-supplies.example",
+            "isPrimary": true
+          }
+        ]
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        let response_body = res.getBody();
+        let vendor_party_public_id = response_body?.data?.publicId;
+        bru.setEnvVar("vendor_party_public_id", vendor_party_public_id)
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

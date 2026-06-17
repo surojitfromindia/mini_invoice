@@ -41,6 +41,16 @@ pub const ITEM_REQUIRED_UNIT: &str = "300.000.0002";
 pub const ITEM_INVALID_SKU: &str = "300.000.0003";
 pub const ITEM_INVALID_NAME: &str = "300.000.0004";
 
+// Auto number domain
+pub const AUTO_NUMBER_SERIES_NOT_FOUND: &str = "400.000.0001";
+pub const AUTO_NUMBER_INVALID_QUANTITY: &str = "400.000.0002";
+pub const AUTO_NUMBER_INVALID_SERIES_KEY: &str = "400.000.0003";
+pub const AUTO_NUMBER_INVALID_CONFIG: &str = "400.000.0004";
+
+// Party domain
+pub const PARTY_ACCOUNT_NOT_FOUND: &str = "500.000.0001";
+pub const PARTY_ACCOUNT_NOT_POSTING: &str = "500.000.0002";
+
 // Database and unexpected internal failures
 pub const LISTING_INVALID_PAGINATION: &str = "900.000.0001";
 pub const DATABASE_DUPLICATE_RECORD: &str = "900.001.0001";

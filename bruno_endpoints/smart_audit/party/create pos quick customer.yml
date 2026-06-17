@@ -1,0 +1,49 @@
+info:
+  name: create pos quick customer
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{base_url_api_v1}}/party"
+  body:
+    type: json
+    data: |-
+      {
+        "code": "POS-001",
+        "partyType": "customer",
+        "partyKind": "person",
+        "source": "posQuick",
+        "displayName": "+919888888888",
+        "namePrimary": "+919888888888",
+        "nameSecondary": null,
+        "legalName": null,
+        "phone": "+919888888888",
+        "email": null,
+        "taxNo": null,
+        "taxTreatment": "consumer",
+        "countryIsoCode": "IN",
+        "currencyIsoCode": "INR",
+        "paymentTermsDays": null,
+        "creditLimit": null,
+        "allowCredit": false,
+        "notes": null,
+        "accountingProfile": null,
+        "addresses": [],
+        "contacts": []
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        let response_body = res.getBody();
+        let pos_customer_party_public_id = response_body?.data?.publicId;
+        bru.setEnvVar("pos_customer_party_public_id", pos_customer_party_public_id)
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,9 +1,11 @@
 pub mod auth_dto;
+pub mod auto_number_dto;
 pub mod branch_dto;
 pub mod coa_dto;
 pub mod common_dto;
 pub mod item_dto;
 pub mod organization_dto;
+pub mod party_dto;
 pub mod staff_dto;
 pub mod staff_role_dto;
 pub mod unit_dto;

@@ -1,0 +1,78 @@
+info:
+  name: create customer party
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{base_url_api_v1}}/party"
+  body:
+    type: json
+    data: |-
+      {
+        "code": "CUS-001",
+        "partyType": "customer",
+        "partyKind": "business",
+        "source": "manual",
+        "displayName": "Acme Stores",
+        "namePrimary": "Acme Stores Pvt Ltd",
+        "nameSecondary": null,
+        "legalName": "Acme Stores Private Limited",
+        "phone": "+919876543210",
+        "email": "billing@acme.example",
+        "taxNo": "GSTIN123456789",
+        "taxTreatment": "registered",
+        "countryIsoCode": "IN",
+        "currencyIsoCode": "INR",
+        "paymentTermsDays": 30,
+        "creditLimit": "50000.00",
+        "allowCredit": true,
+        "notes": null,
+        "accountingProfile": {
+          "defaultSalesAccountPublicId": null,
+          "defaultPurchaseAccountPublicId": null,
+          "defaultReceivableAccountPublicId": null,
+          "defaultPayableAccountPublicId": null,
+          "defaultOutputTaxAccountPublicId": null,
+          "defaultInputTaxAccountPublicId": null
+        },
+        "addresses": [
+          {
+            "addressType": "billing",
+            "label": "Billing",
+            "line1": "12 Market Road",
+            "line2": null,
+            "city": "Kolkata",
+            "stateRegion": "West Bengal",
+            "postalCode": "700001",
+            "countryIsoCode": "IN",
+            "isDefaultBilling": true,
+            "isDefaultShipping": false
+          }
+        ],
+        "contacts": [
+          {
+            "namePrimary": "Rahul Sen",
+            "nameSecondary": null,
+            "designation": "Accounts",
+            "phone": "+919800000000",
+            "email": "rahul@acme.example",
+            "isPrimary": true
+          }
+        ]
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        let response_body = res.getBody();
+        let customer_party_public_id = response_body?.data?.publicId;
+        bru.setEnvVar("customer_party_public_id", customer_party_public_id)
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
