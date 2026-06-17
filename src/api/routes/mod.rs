@@ -13,6 +13,7 @@ mod openapi_docs;
 mod organization_routes;
 mod staff_role_routes;
 mod staff_routes;
+mod unit_routes;
 mod user_routes;
 
 pub fn create_routes() -> Router<AppState> {
@@ -30,6 +31,7 @@ pub fn create_routes() -> Router<AppState> {
         .nest("/api/v1/chart_of_accounts", coa_routes::routes())
         .nest("/api/v1/branch", branch_routes::routes())
         .nest("/api/v1/item", item_routes::routes())
+        .nest("/api/v1/unit", unit_routes::routes())
         .nest("/api/v1/staff_role", staff_role_routes::routes())
         .nest("/api/v1/user_account", user_routes::routes())
         .nest("/api/v1/staff", staff_routes::routes())

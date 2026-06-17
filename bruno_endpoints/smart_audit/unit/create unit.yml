@@ -1,0 +1,33 @@
+info:
+  name: create unit
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{base_url_api_v1}}/unit"
+  body:
+    type: json
+    data: |-
+      {
+        "code": "BAG",
+        "namePrimary": "Bag",
+        "nameSecondary": null,
+        "symbol": "bag",
+        "decimalPlaces": 0
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        let response_body = res.getBody();
+        let unit_public_id = response_body?.data?.publicId;
+        bru.setEnvVar("unit_public_id", unit_public_id)
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
