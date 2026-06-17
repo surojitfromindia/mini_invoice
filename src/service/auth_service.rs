@@ -82,30 +82,7 @@ impl AuthService {
         ctx: &ServiceContext,
         refresh_token: String,
     ) -> Result<AuthTokens, AppError> {
-        let settings = &ctx.app_state.settings;
-        let jwt = JwtHelpers::new(settings);
-        let claims = jwt.verify_refresh_token(&refresh_token)?;
-        let user = UserService::get_user_by_public_id(ctx, &claims.public_id).await?;
-        let credential = UserCredentialService::get_credential(ctx, user.id).await?;
-
-        let is_match =
-            UserCredentialService::verify_refresh_token(settings, &refresh_token, &credential)?;
-        if !is_match {
-            return Err(JwtError::InvalidToken.into());
-        }
-
-        if let Some(refresh_expiry) = credential.refresh_token_expires_at {
-            if refresh_expiry < Utc::now() {
-                return Err(JwtError::InvalidToken.into());
-            }
-        }
-
-        if let Some(password_changed_at) = credential.password_changed_at {
-            if claims.iat < password_changed_at.timestamp() as usize {
-                return Err(JwtError::InvalidToken.into());
-            }
-        }
-
+        let user = Self::validate_refresh_token(ctx, &refresh_token).await?;
         let tokens = Self::issue_auth_tokens(ctx, user.id, &user.public_id).await?;
         LoginLogsService::save_log(
             ctx,
@@ -116,6 +93,24 @@ impl AuthService {
         )
         .await?;
         Ok(tokens)
+    }
+
+    pub async fn issue_access_token_from_refresh_token(
+        ctx: &ServiceContext,
+        refresh_token: String,
+    ) -> Result<String, AppError> {
+        let user = Self::validate_refresh_token(ctx, &refresh_token).await?;
+        let settings = &ctx.app_state.settings;
+        let jwt = JwtHelpers::new(settings);
+        let organization_public_id = StaffService::get_default_organization_for_user(
+            &ctx.app_state.primary_read_replica,
+            user.id,
+        )
+        .await?
+        .map(|organization| organization.public_id);
+
+        jwt.generate_access_token(&user.public_id, organization_public_id.as_deref())
+            .map_err(Into::into)
     }
 
     pub async fn logout(ctx: &ServiceContext) -> Result<(), AppError> {
@@ -169,5 +164,36 @@ impl AuthService {
             access_token,
             refresh_token,
         })
+    }
+
+    async fn validate_refresh_token(
+        ctx: &ServiceContext,
+        refresh_token: &str,
+    ) -> Result<crate::entity::user_entity::Model, AppError> {
+        let settings = &ctx.app_state.settings;
+        let jwt = JwtHelpers::new(settings);
+        let claims = jwt.verify_refresh_token(refresh_token)?;
+        let user = UserService::get_user_by_public_id(ctx, &claims.public_id).await?;
+        let credential = UserCredentialService::get_credential(ctx, user.id).await?;
+
+        let is_match =
+            UserCredentialService::verify_refresh_token(settings, refresh_token, &credential)?;
+        if !is_match {
+            return Err(JwtError::InvalidToken.into());
+        }
+
+        if let Some(refresh_expiry) = credential.refresh_token_expires_at {
+            if refresh_expiry < Utc::now() {
+                return Err(JwtError::InvalidToken.into());
+            }
+        }
+
+        if let Some(password_changed_at) = credential.password_changed_at {
+            if claims.iat < password_changed_at.timestamp() as usize {
+                return Err(JwtError::InvalidToken.into());
+            }
+        }
+
+        Ok(user)
     }
 }

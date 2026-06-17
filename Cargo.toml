@@ -24,3 +24,4 @@ argon2 = {version = "0.6.0-rc.8", features = ["rand_core","getrandom"]}
 axum-extra = {version = "0.12.6", features = ["query"]}
 aide = {version = "0.15.1", features = ["axum", "axum-json", "axum-query", "swagger"]}
 schemars = {version = "0.9.0", features = ["chrono04", "rust_decimal1"]}
+rmcp = {version = "1.7.0", features = ["transport-streamable-http-server"]}

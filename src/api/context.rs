@@ -62,80 +62,89 @@ impl FromRequestParts<AppState> for AuthenticatedContext {
         let headers = parts.headers.clone();
 
         async move {
-            let token = headers
-                .get("authorization")
-                .and_then(|h| h.to_str().ok())
-                .and_then(|h| h.strip_prefix("Bearer "))
-                .ok_or(AppError::Unauthorized)?;
+            Ok(AuthenticatedContext(
+                authenticated_service_context(state, &headers).await?,
+            ))
+        }
+    }
+}
 
-            // verify access token.
-            let jwt = JwtHelpers::new(&state.settings);
-            let claims = jwt.verify_access_token(token)?;
-            let public_id = claims.public_id;
+pub async fn authenticated_service_context(
+    state: AppState,
+    headers: &HeaderMap,
+) -> Result<ServiceContext, AppError> {
+    let token = headers
+        .get("authorization")
+        .and_then(|h| h.to_str().ok())
+        .and_then(|h| h.strip_prefix("Bearer "))
+        .ok_or(AppError::Unauthorized)?;
 
-            // get user actor.
-            let actor_id =
-                PublicIdResolver::actor_id(&state.primary_read_replica, &public_id).await?;
-            let user_id = Actor::Entity::find_by_id(actor_id)
-                .one(&state.primary_read_replica)
-                .await?
-                .and_then(|actor| actor.user_id);
-            // Resolve the organization-scoped staff membership during authentication
-            // so downstream handlers can enforce RBAC without repeating lookups.
-            let organization_staff = match (user_id, claims.organization_public_id) {
-                (Some(user_id), Some(organization_public_id)) => {
-                    let organization_id = PublicIdResolver::organization_id(
-                        &state.primary_read_replica,
-                        &organization_public_id,
-                    )
-                    .await?;
-                    let membership = AuthResolver::staff_access(
-                        &state.primary_read_replica,
-                        user_id,
-                        organization_id,
-                    )
+    // Verify access token and resolve the actor that owns it.
+    let jwt = JwtHelpers::new(&state.settings);
+    let claims = jwt.verify_access_token(token)?;
+    let public_id = claims.public_id;
+
+    let actor_id = PublicIdResolver::actor_id(&state.primary_read_replica, &public_id).await?;
+    let user_id = Actor::Entity::find_by_id(actor_id)
+        .one(&state.primary_read_replica)
+        .await?
+        .and_then(|actor| actor.user_id);
+
+    // Resolve organization-scoped staff membership during authentication so
+    // route handlers and MCP tools can enforce RBAC through the same context.
+    let organization_staff = match (user_id, claims.organization_public_id) {
+        (Some(user_id), Some(organization_public_id)) => {
+            let organization_id = PublicIdResolver::organization_id(
+                &state.primary_read_replica,
+                &organization_public_id,
+            )
+            .await?;
+            let membership =
+                AuthResolver::staff_access(&state.primary_read_replica, user_id, organization_id)
                     .await
                     .map_err(|error| match error {
                         AppError::Staff(StaffServiceError::NotFound) => AppError::Unauthorized,
                         other => other,
                     })?;
-                    let ResolvedStaffAccess {
-                        staff,
-                        role,
-                        permission_codes,
-                    } = membership;
-                    let permission_code_set = build_permission_code_set(&permission_codes);
+            let ResolvedStaffAccess {
+                staff,
+                role,
+                permission_codes,
+            } = membership;
+            let permission_code_set = build_permission_code_set(&permission_codes);
 
-                    Some(OrganizationStaffAccess {
-                        staff_id: staff.id,
-                        organization_id: staff.organization_id,
-                        role_id: role.id,
-                        role_public_id: role.public_id,
-                        permission_codes,
-                        permission_code_set,
-                    })
-                }
-                _ => None,
-            };
-            let organization_id = organization_staff
-                .as_ref()
-                .map(|staff| staff.organization_id);
-
-            // build auth context
-            let auth_context = AuthContext {
-                actor_id,
-                user_id,
-                client_app_id: None,
-                organization_id,
-                organization_staff,
-            };
-
-            // build service context.
-            let mut ctx = ServiceContext::from_app_state(state);
-            ctx.set_auth(auth_context);
-            ctx.set_request_context(build_request_context(&headers));
-
-            Ok(AuthenticatedContext(ctx))
+            Some(OrganizationStaffAccess {
+                staff_id: staff.id,
+                organization_id: staff.organization_id,
+                role_id: role.id,
+                role_public_id: role.public_id,
+                permission_codes,
+                permission_code_set,
+            })
         }
-    }
+        _ => None,
+    };
+    let organization_id = organization_staff
+        .as_ref()
+        .map(|staff| staff.organization_id);
+
+    let auth_context = AuthContext {
+        actor_id,
+        user_id,
+        client_app_id: None,
+        organization_id,
+        organization_staff,
+    };
+
+    let mut ctx = ServiceContext::from_app_state(state);
+    ctx.set_auth(auth_context);
+    ctx.set_request_context(build_request_context(headers));
+
+    Ok(ctx)
+}
+
+pub fn public_service_context(state: AppState, headers: &HeaderMap) -> ServiceContext {
+    let mut ctx = ServiceContext::from_app_state(state);
+    ctx.set_request_context(build_request_context(headers));
+    ctx
 }

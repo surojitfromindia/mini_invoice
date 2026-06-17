@@ -3,6 +3,7 @@ use crate::app_state::AppState;
 use crate::config;
 use crate::config::tracing::init_tracing;
 use crate::db::connection::{init_read_replica_db, init_write_replica_db};
+use crate::mcp;
 use axum::Router;
 use axum::http::Method;
 use axum::http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE, HeaderName};
@@ -29,6 +30,7 @@ pub async fn create_app() -> anyhow::Result<Router> {
     let app = Router::new()
         .route("/health", get(check_health))
         .merge(api::routes::create_routes())
+        .merge(mcp::routes(app_state.clone()))
         .layer(cors_layer())
         .layer(TraceLayer::new_for_http())
         .with_state(app_state);

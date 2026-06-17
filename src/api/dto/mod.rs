@@ -6,4 +6,5 @@ pub mod item_dto;
 pub mod organization_dto;
 pub mod staff_dto;
 pub mod staff_role_dto;
+pub mod unit_dto;
 pub mod user_dto;
