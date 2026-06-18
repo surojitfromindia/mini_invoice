@@ -1,0 +1,23 @@
+info:
+  name: update auto number series
+  type: http
+  seq: 4
+
+http:
+  method: PUT
+  url: "{{base_url_api_v1}}/auto_number/{{auto_number_series_public_id}}"
+  body:
+    type: json
+    data: |-
+      {
+        "prefixTemplate": "CUS-",
+        "paddingWidth": 5,
+        "status": "active"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

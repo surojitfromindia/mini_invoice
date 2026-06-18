@@ -5,7 +5,9 @@ use sea_orm::entity::prelude::Decimal;
 use serde::{Deserialize, Serialize};
 
 use super::common_dto::{IntoServiceInput, PagePaginationQuery};
-use crate::service::item_service::{ItemListItem, ItemListPageInput, ItemSortField, SortDirection};
+use crate::service::item_service::{
+    ItemDetail, ItemListItem, ItemListPageInput, ItemSortField, SortDirection,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
@@ -211,6 +213,28 @@ pub struct ItemListItemResponseDto {
     pub status: ItemStatusDto,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ItemResponseDto {
+    pub public_id: String,
+    pub sku: String,
+    pub barcode: Option<String>,
+    pub name_primary: String,
+    pub name_secondary: Option<String>,
+    pub description: Option<String>,
+    pub item_type: ItemTypeDto,
+    pub item_usage: ItemUsageDto,
+    pub base_unit_public_id: String,
+    pub purchase_unit_public_id: Option<String>,
+    pub sales_unit_public_id: Option<String>,
+    pub default_purchase_price: Option<Decimal>,
+    pub default_sales_price: Option<Decimal>,
+    pub track_inventory: bool,
+    pub allow_negative_stock: bool,
+    pub reorder_level: Option<Decimal>,
+    pub status: ItemStatusDto,
+}
+
 impl ItemListItemResponseDto {
     pub fn from_service_output(item: ItemListItem) -> Self {
         Self {
@@ -230,6 +254,30 @@ impl ItemListItemResponseDto {
 
     pub fn page_from_service_output(result: PageListResult<ItemListItem>) -> PageListResult<Self> {
         result.map_rows(Self::from_service_output)
+    }
+}
+
+impl ItemResponseDto {
+    pub fn from_service_output(item: ItemDetail) -> Self {
+        Self {
+            public_id: item.public_id,
+            sku: item.sku,
+            barcode: item.barcode,
+            name_primary: item.name_primary,
+            name_secondary: item.name_secondary,
+            description: item.description,
+            item_type: ItemTypeDto::from_service_output(item.item_type),
+            item_usage: ItemUsageDto::from_service_output(item.item_usage),
+            base_unit_public_id: item.base_unit_public_id,
+            purchase_unit_public_id: item.purchase_unit_public_id,
+            sales_unit_public_id: item.sales_unit_public_id,
+            default_purchase_price: item.default_purchase_price,
+            default_sales_price: item.default_sales_price,
+            track_inventory: item.track_inventory,
+            allow_negative_stock: item.allow_negative_stock,
+            reorder_level: item.reorder_level,
+            status: ItemStatusDto::from_service_output(item.status),
+        }
     }
 }
 
@@ -322,6 +370,54 @@ mod tests {
                 "defaultSalesPrice": "12.75",
                 "trackInventory": true,
                 "status": "inactive"
+            })
+        );
+    }
+
+    #[test]
+    fn item_response_serializes_detail_fields_as_camel_case_keys() {
+        let response = ItemResponseDto::from_service_output(ItemDetail {
+            public_id: "item_123".to_string(),
+            sku: "ITEM-001".to_string(),
+            barcode: Some("12345".to_string()),
+            name_primary: "Milk".to_string(),
+            name_secondary: Some("Full Cream".to_string()),
+            description: Some("Shelf item".to_string()),
+            item_type: ItemType::Product,
+            item_usage: ItemUsage::Both,
+            base_unit_public_id: "u_base".to_string(),
+            purchase_unit_public_id: None,
+            sales_unit_public_id: Some("u_sales".to_string()),
+            default_purchase_price: Some("10.00".parse().unwrap()),
+            default_sales_price: Some("12.75".parse().unwrap()),
+            track_inventory: true,
+            allow_negative_stock: false,
+            reorder_level: Some("4.00".parse().unwrap()),
+            status: ItemStatus::Active,
+        });
+
+        let json = serde_json::to_value(response).unwrap();
+
+        assert_eq!(
+            json,
+            serde_json::json!({
+                "publicId": "item_123",
+                "sku": "ITEM-001",
+                "barcode": "12345",
+                "namePrimary": "Milk",
+                "nameSecondary": "Full Cream",
+                "description": "Shelf item",
+                "itemType": "product",
+                "itemUsage": "both",
+                "baseUnitPublicId": "u_base",
+                "purchaseUnitPublicId": null,
+                "salesUnitPublicId": "u_sales",
+                "defaultPurchasePrice": "10.00",
+                "defaultSalesPrice": "12.75",
+                "trackInventory": true,
+                "allowNegativeStock": false,
+                "reorderLevel": "4.00",
+                "status": "active"
             })
         );
     }

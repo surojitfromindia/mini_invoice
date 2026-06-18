@@ -1,7 +1,7 @@
 use crate::entity::PrimaryId;
 use crate::service::coa_service::{
     ChartOfAccountFlatItem, ChartOfAccountItemFields, ChartOfAccountTreeItem,
-    ChartOfAccountsTemplate, ChartOfAccountsViewResult, CoaViewMode,
+    ChartOfAccountsTemplate, ChartOfAccountsViewResult, CoaViewMode, CreateChartOfAccountInput,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -34,6 +34,48 @@ impl IntoServiceInput<CoaViewMode> for ChartOfAccountsViewModeDto {
 #[serde(rename_all = "camelCase")]
 pub struct ChartOfAccountsQueryDto {
     pub view: Option<ChartOfAccountsViewModeDto>,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateChartOfAccountRequestDto {
+    pub code: String,
+    pub name_primary: String,
+    pub name_secondary: Option<String>,
+    pub description: Option<String>,
+    pub parent_account_public_id: String,
+}
+
+pub struct CreateChartOfAccountResolutionInput {
+    pub code: String,
+    pub name_primary: String,
+    pub name_secondary: Option<String>,
+    pub description: Option<String>,
+    pub parent_account_public_id: String,
+}
+
+impl CreateChartOfAccountRequestDto {
+    pub fn into_resolution_input(self) -> CreateChartOfAccountResolutionInput {
+        CreateChartOfAccountResolutionInput {
+            code: self.code,
+            name_primary: self.name_primary,
+            name_secondary: self.name_secondary,
+            description: self.description,
+            parent_account_public_id: self.parent_account_public_id,
+        }
+    }
+}
+
+impl CreateChartOfAccountResolutionInput {
+    pub fn into_service_input(self, parent_account_id: PrimaryId) -> CreateChartOfAccountInput {
+        CreateChartOfAccountInput {
+            code: self.code,
+            name_primary: self.name_primary,
+            name_secondary: self.name_secondary,
+            description: self.description,
+            parent_account_id,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
@@ -133,7 +175,7 @@ impl ChartOfAccountTreeItemDto {
 }
 
 impl ChartOfAccountItemDto {
-    fn from_service_output(account: ChartOfAccountItemFields) -> Self {
+    pub fn from_service_output(account: ChartOfAccountItemFields) -> Self {
         Self {
             id: account.id,
             public_id: account.public_id,
@@ -192,6 +234,22 @@ mod tests {
             serde_json::from_value(serde_json::json!({ "view": "flat" })).unwrap();
 
         assert_eq!(query.view, Some(ChartOfAccountsViewModeDto::Flat));
+    }
+
+    #[test]
+    fn create_chart_of_account_request_deserializes_camel_case_keys() {
+        let request: CreateChartOfAccountRequestDto = serde_json::from_value(serde_json::json!({
+            "code": "1019",
+            "namePrimary": "Operating Bank",
+            "nameSecondary": null,
+            "description": "Main checking account",
+            "parentAccountPublicId": "coa_parent_1"
+        }))
+        .unwrap();
+
+        assert_eq!(request.code, "1019");
+        assert_eq!(request.name_primary, "Operating Bank");
+        assert_eq!(request.parent_account_public_id, "coa_parent_1");
     }
 
     #[test]

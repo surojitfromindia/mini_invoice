@@ -1,0 +1,15 @@
+info:
+  name: delete staff
+  type: http
+  seq: 9
+
+http:
+  method: DELETE
+  url: "{{base_url_api_v1}}/staff/{{staff_public_id}}"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,28 @@
+info:
+  name: update staff
+  type: http
+  seq: 8
+
+http:
+  method: PUT
+  url: "{{base_url_api_v1}}/staff/{{staff_public_id}}"
+  body:
+    type: json
+    data: |-
+      {
+        "namePrimary": "Staff One",
+        "nameSecondary": null,
+        "rolePublicId": "{{staff_role_public_id}}",
+        "branchPublicIds": [
+          "{{branch_public_id}}"
+        ],
+        "isDefaultOrganization": false,
+        "status": "active"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

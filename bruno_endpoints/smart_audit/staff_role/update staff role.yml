@@ -1,0 +1,28 @@
+info:
+  name: update staff role
+  type: http
+  seq: 4
+
+http:
+  method: PUT
+  url: "{{base_url_api_v1}}/staff_role/{{staff_role_public_id}}"
+  body:
+    type: json
+    data: |-
+      {
+        "namePrimary": "Senior Auditor",
+        "nameSecondary": "Senior Auditor",
+        "permissionCodes": [
+          "staff.invite",
+          "staff.invitation.resend",
+          "staff.read"
+        ],
+        "status": "active"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

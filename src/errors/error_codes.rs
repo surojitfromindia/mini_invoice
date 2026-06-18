@@ -34,12 +34,14 @@ pub const STAFF_INVITATION_EXPIRED: &str = "200.000.0004";
 pub const STAFF_INVITATION_ALREADY_USED: &str = "200.000.0005";
 pub const STAFF_ROLE_NOT_FOUND: &str = "200.000.0006";
 pub const STAFF_INVALID_PERMISSION: &str = "200.000.0007";
+pub const STAFF_ROLE_SYSTEM_PROTECTED: &str = "200.000.0008";
 
 // Item domain
 pub const ITEM_UNIT_NOT_FOUND: &str = "300.000.0001";
 pub const ITEM_REQUIRED_UNIT: &str = "300.000.0002";
 pub const ITEM_INVALID_SKU: &str = "300.000.0003";
 pub const ITEM_INVALID_NAME: &str = "300.000.0004";
+pub const ITEM_NOT_FOUND: &str = "300.000.0005";
 
 // Auto number domain
 pub const AUTO_NUMBER_SERIES_NOT_FOUND: &str = "400.000.0001";
@@ -48,8 +50,17 @@ pub const AUTO_NUMBER_INVALID_SERIES_KEY: &str = "400.000.0003";
 pub const AUTO_NUMBER_INVALID_CONFIG: &str = "400.000.0004";
 
 // Party domain
-pub const PARTY_ACCOUNT_NOT_FOUND: &str = "500.000.0001";
-pub const PARTY_ACCOUNT_NOT_POSTING: &str = "500.000.0002";
+pub const PARTY_NOT_FOUND: &str = "500.000.0001";
+pub const PARTY_ACCOUNT_NOT_FOUND: &str = "500.000.0002";
+pub const PARTY_ACCOUNT_NOT_POSTING: &str = "500.000.0003";
+
+// Chart of accounts domain
+pub const COA_ACCOUNT_NOT_FOUND: &str = "600.000.0001";
+pub const COA_PARENT_ACCOUNT_NOT_FOUND: &str = "600.000.0002";
+pub const COA_PARENT_ACCOUNT_INVALID: &str = "600.000.0003";
+pub const COA_SYSTEM_ACCOUNT_PROTECTED: &str = "600.000.0004";
+pub const COA_ACCOUNT_HAS_CHILDREN: &str = "600.000.0005";
+pub const COA_ACCOUNT_IN_USE: &str = "600.000.0006";
 
 // Database and unexpected internal failures
 pub const LISTING_INVALID_PAGINATION: &str = "900.000.0001";

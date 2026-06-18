@@ -57,6 +57,7 @@ impl PublicIdResolver {
         StaffRole::Entity::find()
             .filter(StaffRole::Column::OrganizationId.eq(organization_id))
             .filter(StaffRole::Column::PublicId.eq(public_id))
+            .filter(StaffRole::Column::Status.ne(crate::entity::GenericStatus::Deleted))
             .one(db_transaction)
             .await?
             .map(|staff_role| staff_role.id)

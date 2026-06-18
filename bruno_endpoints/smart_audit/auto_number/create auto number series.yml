@@ -1,0 +1,37 @@
+info:
+  name: create auto number series
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{base_url_api_v1}}/auto_number"
+  body:
+    type: json
+    data: |-
+      {
+        "branchPublicId": "{{branch_public_id}}",
+        "seriesKey": "customer",
+        "prefixTemplate": "CUS-",
+        "suffixTemplate": null,
+        "paddingWidth": 4,
+        "startNumber": 1,
+        "incrementBy": 1,
+        "resetPolicy": "never",
+        "status": "active"
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        let response_body = res.getBody();
+        let auto_number_series_public_id = response_body?.data?.publicId;
+        bru.setEnvVar("auto_number_series_public_id", auto_number_series_public_id)
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,10 +1,13 @@
 pub mod app_error;
+pub mod auto_number_service_errors;
+pub mod coa_service_errors;
 mod db_errors;
 pub mod error_codes;
 mod error_meta;
 mod internal_error_messages;
 pub mod item_service_errors;
 pub mod jwt_errors;
+pub mod party_service_errors;
 pub mod user_credential_service_errors;
 pub mod user_service_errors;
 

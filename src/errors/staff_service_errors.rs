@@ -10,6 +10,7 @@ pub enum StaffServiceError {
     InvitationNotFound,
     InvitationExpired,
     InvitationAlreadyUsed,
+    SystemRoleProtected,
 }
 
 impl From<StaffServiceError> for AppError {
@@ -49,6 +50,11 @@ impl ErrorMetadata for StaffServiceError {
             Self::InvitationAlreadyUsed => ErrorMeta::new(
                 error_codes::STAFF_INVITATION_ALREADY_USED,
                 "Staff invitation is not valid anymore",
+                HttpErrorCode::Conflict,
+            ),
+            Self::SystemRoleProtected => ErrorMeta::new(
+                error_codes::STAFF_ROLE_SYSTEM_PROTECTED,
+                "System staff role cannot be deleted",
                 HttpErrorCode::Conflict,
             ),
         }

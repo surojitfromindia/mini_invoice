@@ -1,4 +1,4 @@
-use crate::auth::permission::deserialize_permission_codes;
+use crate::auth::permission::{Permission, deserialize_permission_codes};
 use sea_orm::{ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter};
 
 use crate::entity::PrimaryId;
@@ -34,8 +34,14 @@ impl AuthResolver {
             .await?
             .ok_or(StaffServiceError::RoleNotFound)?;
 
+        let permission_codes = if role.is_system_role && role.name_primary == "Owner" {
+            Permission::all_codes()
+        } else {
+            deserialize_permission_codes(&role.permissions)
+        };
+
         Ok(ResolvedStaffAccess {
-            permission_codes: deserialize_permission_codes(&role.permissions),
+            permission_codes,
             staff,
             role,
         })

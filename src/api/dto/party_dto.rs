@@ -3,6 +3,7 @@ use crate::entity::party::party_address_entity::PartyAddressType;
 use crate::entity::party::party_entity::{PartyKind, PartySource, PartyStatus, PartyType};
 use crate::service::party_service::{
     CreatePartyAccountingProfileInput, CreatePartyAddressInput, CreatePartyContactInput,
+    PartyAccountingProfileDetail, PartyAddressDetail, PartyContactDetail, PartyDetail,
     PartyListItem, PartyListPageInput, PartySortField, SortDirection,
 };
 use schemars::JsonSchema;
@@ -321,6 +322,17 @@ impl PartyAddressTypeDto {
             Self::Other => PartyAddressType::Other,
         }
     }
+
+    pub fn from_service_output(address_type: PartyAddressType) -> Self {
+        match address_type {
+            PartyAddressType::Billing => Self::Billing,
+            PartyAddressType::Shipping => Self::Shipping,
+            PartyAddressType::Registered => Self::Registered,
+            PartyAddressType::Office => Self::Office,
+            PartyAddressType::Home => Self::Home,
+            PartyAddressType::Other => Self::Other,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, JsonSchema)]
@@ -381,6 +393,118 @@ pub struct PartyListItemResponseDto {
     pub credit_limit: Option<Decimal>,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct PartyAddressResponseDto {
+    pub address_type: PartyAddressTypeDto,
+    pub label: Option<String>,
+    pub line1: String,
+    pub line2: Option<String>,
+    pub city: Option<String>,
+    pub state_region: Option<String>,
+    pub postal_code: Option<String>,
+    pub country_iso_code: Option<String>,
+    pub is_default_billing: bool,
+    pub is_default_shipping: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct PartyContactResponseDto {
+    pub name_primary: String,
+    pub name_secondary: Option<String>,
+    pub designation: Option<String>,
+    pub phone: Option<String>,
+    pub email: Option<String>,
+    pub is_primary: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct PartyAccountingProfileResponseDto {
+    pub default_sales_account_public_id: Option<String>,
+    pub default_purchase_account_public_id: Option<String>,
+    pub default_receivable_account_public_id: Option<String>,
+    pub default_payable_account_public_id: Option<String>,
+    pub default_output_tax_account_public_id: Option<String>,
+    pub default_input_tax_account_public_id: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct PartyDetailResponseDto {
+    pub public_id: String,
+    pub code: String,
+    pub party_type: PartyTypeDto,
+    pub party_kind: PartyKindDto,
+    pub status: PartyStatusDto,
+    pub source: PartySourceDto,
+    pub display_name: String,
+    pub name_primary: String,
+    pub name_secondary: Option<String>,
+    pub legal_name: Option<String>,
+    pub phone: Option<String>,
+    pub email: Option<String>,
+    pub tax_no: Option<String>,
+    pub tax_treatment: Option<String>,
+    pub country_iso_code: Option<String>,
+    pub currency_iso_code: Option<String>,
+    pub allow_credit: bool,
+    pub payment_terms_days: Option<i16>,
+    pub credit_limit: Option<Decimal>,
+    pub notes: Option<String>,
+    pub addresses: Vec<PartyAddressResponseDto>,
+    pub contacts: Vec<PartyContactResponseDto>,
+    pub accounting_profile: Option<PartyAccountingProfileResponseDto>,
+}
+
+impl PartyAddressResponseDto {
+    pub fn from_service_output(address: PartyAddressDetail) -> Self {
+        Self {
+            address_type: PartyAddressTypeDto::from_service_output(address.address_type),
+            label: address.label,
+            line1: address.line1,
+            line2: address.line2,
+            city: address.city,
+            state_region: address.state_region,
+            postal_code: address.postal_code,
+            country_iso_code: address.country_iso_code,
+            is_default_billing: address.is_default_billing,
+            is_default_shipping: address.is_default_shipping,
+        }
+    }
+}
+
+impl PartyContactResponseDto {
+    pub fn from_service_output(contact: PartyContactDetail) -> Self {
+        Self {
+            name_primary: contact.name_primary,
+            name_secondary: contact.name_secondary,
+            designation: contact.designation,
+            phone: contact.phone,
+            email: contact.email,
+            is_primary: contact.is_primary,
+        }
+    }
+}
+
+impl PartyAccountingProfileResponseDto {
+    pub fn from_service_output(accounting_profile: PartyAccountingProfileDetail) -> Self {
+        Self {
+            default_sales_account_public_id: accounting_profile.default_sales_account_public_id,
+            default_purchase_account_public_id: accounting_profile
+                .default_purchase_account_public_id,
+            default_receivable_account_public_id: accounting_profile
+                .default_receivable_account_public_id,
+            default_payable_account_public_id: accounting_profile.default_payable_account_public_id,
+            default_output_tax_account_public_id: accounting_profile
+                .default_output_tax_account_public_id,
+            default_input_tax_account_public_id: accounting_profile
+                .default_input_tax_account_public_id,
+        }
+    }
+}
+
 impl PartyListItemResponseDto {
     pub fn from_service_output(item: PartyListItem) -> Self {
         Self {
@@ -407,6 +531,46 @@ impl PartyListItemResponseDto {
 
     pub fn page_from_service_output(result: PageListResult<PartyListItem>) -> PageListResult<Self> {
         result.map_rows(Self::from_service_output)
+    }
+}
+
+impl PartyDetailResponseDto {
+    pub fn from_service_output(detail: PartyDetail) -> Self {
+        Self {
+            public_id: detail.public_id,
+            code: detail.code,
+            party_type: PartyTypeDto::from_service_output(detail.party_type),
+            party_kind: PartyKindDto::from_service_output(detail.party_kind),
+            status: PartyStatusDto::from_service_output(detail.status),
+            source: PartySourceDto::from_service_output(detail.source),
+            display_name: detail.display_name,
+            name_primary: detail.name_primary,
+            name_secondary: detail.name_secondary,
+            legal_name: detail.legal_name,
+            phone: detail.phone,
+            email: detail.email,
+            tax_no: detail.tax_no,
+            tax_treatment: detail.tax_treatment,
+            country_iso_code: detail.country_iso_code,
+            currency_iso_code: detail.currency_iso_code,
+            allow_credit: detail.allow_credit,
+            payment_terms_days: detail.payment_terms_days,
+            credit_limit: detail.credit_limit,
+            notes: detail.notes,
+            addresses: detail
+                .addresses
+                .into_iter()
+                .map(PartyAddressResponseDto::from_service_output)
+                .collect(),
+            contacts: detail
+                .contacts
+                .into_iter()
+                .map(PartyContactResponseDto::from_service_output)
+                .collect(),
+            accounting_profile: detail
+                .accounting_profile
+                .map(PartyAccountingProfileResponseDto::from_service_output),
+        }
     }
 }
 

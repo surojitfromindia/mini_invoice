@@ -1,0 +1,7 @@
+info:
+  name: auto_number
+  type: folder
+  seq: 11
+
+request:
+  auth: inherit

@@ -1,0 +1,15 @@
+info:
+  name: delete pos quick customer
+  type: http
+  seq: 6
+
+http:
+  method: DELETE
+  url: "{{base_url_api_v1}}/party/{{pos_customer_party_public_id}}"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,15 @@
+info:
+  name: delete chart of account
+  type: http
+  seq: 5
+
+http:
+  method: DELETE
+  url: "{{base_url_api_v1}}/chart_of_accounts/{{coa_account_public_id}}"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

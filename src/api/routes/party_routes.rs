@@ -1,9 +1,9 @@
 use super::openapi_docs;
 use crate::api::AuthenticatedContext;
 use crate::api::api_response::ApiResponse;
-use crate::api::dto::common_dto::{IntoServiceInput, PublicIdResponse};
+use crate::api::dto::common_dto::{ActionStatusResponse, IntoServiceInput, PublicIdResponse};
 use crate::api::dto::party_dto::{
-    CreatePartyRequestDto, PartyListItemResponseDto, PartyListPageQueryDto,
+    CreatePartyRequestDto, PartyDetailResponseDto, PartyListItemResponseDto, PartyListPageQueryDto,
 };
 use crate::app_state::AppState;
 use crate::db::listing::PageListResult;
@@ -11,6 +11,7 @@ use crate::errors::app_error::AppError;
 use crate::resolver::party_payload_resolver::PartyPayloadResolver;
 use crate::service::party_service::PartyService;
 use aide::axum::ApiRouter;
+use axum::extract::Path;
 use axum::extract::Query as AxumQuery;
 use axum::http::StatusCode;
 use axum::routing::post;
@@ -18,10 +19,17 @@ use axum::{Json, Router};
 use axum_extra::extract::Query as AxumExtraQuery;
 
 pub fn routes() -> ApiRouter<AppState> {
-    ApiRouter::from(Router::new().route(
-        "/",
-        post(create_party_handler).get(list_parties_page_handler),
-    ))
+    ApiRouter::from(
+        Router::new()
+            .route(
+                "/",
+                post(create_party_handler).get(list_parties_page_handler),
+            )
+            .route(
+                "/{public_id}",
+                axum::routing::get(get_party_handler).delete(delete_party_handler),
+            ),
+    )
     .api_route_docs(
         "/",
         openapi_docs::method("post", "party", "createParty", "Create party", |op| {
@@ -34,6 +42,18 @@ pub fn routes() -> ApiRouter<AppState> {
         openapi_docs::method("get", "party", "listParties", "List parties", |op| {
             op.input::<AxumQuery<PartyListPageQueryDto>>();
             op.response::<200, ApiResponse<PageListResult<PartyListItemResponseDto>>>();
+        }),
+    )
+    .api_route_docs(
+        "/{public_id}",
+        openapi_docs::method("get", "party", "getParty", "Get party", |op| {
+            op.response::<200, ApiResponse<PartyDetailResponseDto>>();
+        }),
+    )
+    .api_route_docs(
+        "/{public_id}",
+        openapi_docs::method("delete", "party", "deleteParty", "Delete party", |op| {
+            op.response::<200, ApiResponse<ActionStatusResponse>>();
         }),
     )
 }
@@ -67,6 +87,34 @@ async fn list_parties_page_handler(
     Ok(ApiResponse::success(
         PartyListItemResponseDto::page_from_service_output(result),
         "Parties fetched",
+        Some(StatusCode::OK),
+    ))
+}
+
+async fn get_party_handler(
+    AuthenticatedContext(ctx): AuthenticatedContext,
+    Path(public_id): Path<String>,
+) -> Result<ApiResponse<PartyDetailResponseDto>, AppError> {
+    let result = PartyService::get_party(&ctx, &public_id).await?;
+
+    Ok(ApiResponse::success(
+        PartyDetailResponseDto::from_service_output(result),
+        "Party fetched",
+        Some(StatusCode::OK),
+    ))
+}
+
+async fn delete_party_handler(
+    AuthenticatedContext(ctx): AuthenticatedContext,
+    Path(public_id): Path<String>,
+) -> Result<ApiResponse<ActionStatusResponse>, AppError> {
+    PartyService::delete_party(&ctx, &public_id).await?;
+
+    Ok(ApiResponse::success(
+        ActionStatusResponse {
+            status: "deleted".to_string(),
+        },
+        "Party deleted",
         Some(StatusCode::OK),
     ))
 }

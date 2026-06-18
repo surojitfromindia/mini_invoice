@@ -1,14 +1,20 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
-use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
+use sea_orm::{ActiveModelTrait, ColumnTrait, Condition, EntityTrait, QueryFilter, Set};
 
 use crate::entity::coa::coa_entity as CoaAccount;
+use crate::entity::coa::coa_flag_entity as CoaFlag;
+use crate::entity::coa::coa_role_entity as CoaRole;
 use crate::entity::coa::coa_template_entity as CoaTemplate;
+use crate::entity::party::party_accounting_profile_entity as PartyAccountingProfile;
 use crate::entity::{GenericStatus, PrimaryId, PublicId};
 use crate::errors::app_error::AppError;
+use crate::errors::coa_service_errors::CoaServiceError;
 use crate::service::service_context::ServiceContext;
 use crate::service::tree_graph::TreeGraph;
+use crate::utils::date_helpers::DateHelper;
+use crate::utils::id_generator::IdGenerator;
 
 // COA fetch flow:
 // 1. Find the organization's default COA template.
@@ -78,9 +84,143 @@ pub enum ChartOfAccountsViewResult {
     },
 }
 
+pub struct CreateChartOfAccountInput {
+    pub code: String,
+    pub name_primary: String,
+    pub name_secondary: Option<String>,
+    pub description: Option<String>,
+    pub parent_account_id: PrimaryId,
+}
+
 pub struct CoaService;
 
 impl CoaService {
+    pub async fn create_account(
+        ctx: &ServiceContext,
+        payload: CreateChartOfAccountInput,
+    ) -> Result<PublicId, AppError> {
+        let actor_id = ctx.get_actor_id()?;
+        let organization_id = ctx.get_organization_id()?;
+        let template_model = Self::fetch_default_template(ctx, organization_id).await?;
+        let parent = Self::fetch_active_template_account_by_id(
+            ctx,
+            organization_id,
+            template_model.id,
+            payload.parent_account_id,
+        )
+        .await?
+        .ok_or(CoaServiceError::ParentAccountNotFound)?;
+
+        if !Self::is_valid_custom_account_parent(&parent) {
+            return Err(CoaServiceError::ParentAccountInvalid.into());
+        }
+
+        // Custom COA creation is intentionally limited to posting accounts
+        // below a seeded account type, so group/type pointers stay consistent.
+        let now = DateHelper::now().value();
+        let account = CoaAccount::ActiveModel {
+            public_id: Set(IdGenerator::generate_general_id()),
+            organization_id: Set(organization_id),
+            coa_template_id: Set(template_model.id),
+            parent_account_id: Set(Some(parent.id)),
+            account_group_id: Set(parent.account_group_id),
+            account_type_id: Set(Some(parent.id)),
+            code: Set(payload.code.trim().to_string()),
+            name_primary: Set(payload.name_primary.trim().to_string()),
+            name_secondary: Set(payload.name_secondary.map(|value| value.trim().to_string())),
+            description: Set(payload.description.map(|value| value.trim().to_string())),
+            level_no: Set(parent.level_no + 1),
+            is_posting: Set(true),
+            is_system_account: Set(false),
+            status: Set(GenericStatus::Active),
+            created_by_actor_id: Set(actor_id),
+            updated_by_actor_id: Set(None),
+            created_at: Set(now),
+            updated_at: Set(now),
+            ..Default::default()
+        }
+        .insert(&ctx.app_state.primary_write_replica)
+        .await?;
+
+        Ok(account.public_id)
+    }
+
+    pub async fn get_account(
+        ctx: &ServiceContext,
+        public_id: &str,
+    ) -> Result<ChartOfAccountItemFields, AppError> {
+        let organization_id = ctx.get_organization_id()?;
+        let template_model = Self::fetch_default_template(ctx, organization_id).await?;
+        let accounts = Self::fetch_template_accounts(ctx, template_model.id).await?;
+        let account_id = accounts
+            .iter()
+            .find(|account| account.public_id == public_id)
+            .map(|account| account.id)
+            .ok_or(CoaServiceError::AccountNotFound)?;
+        let graph = Self::build_account_graph(accounts)?;
+        let account = graph
+            .get(account_id)
+            .ok_or(CoaServiceError::AccountNotFound)?;
+
+        Self::item_fields(account, &graph)
+    }
+
+    pub async fn delete_account(ctx: &ServiceContext, public_id: &str) -> Result<(), AppError> {
+        let actor_id = ctx.get_actor_id()?;
+        let organization_id = ctx.get_organization_id()?;
+        let template_model = Self::fetch_default_template(ctx, organization_id).await?;
+        let account = Self::fetch_active_template_account_by_public_id(
+            ctx,
+            organization_id,
+            template_model.id,
+            public_id,
+        )
+        .await?
+        .ok_or(CoaServiceError::AccountNotFound)?;
+
+        if account.is_system_account {
+            return Err(CoaServiceError::SystemAccountProtected.into());
+        }
+
+        // A soft delete is only safe while no active hierarchy or business
+        // references still point at this account.
+        if Self::has_active_child_accounts(ctx, organization_id, template_model.id, account.id)
+            .await?
+        {
+            return Err(CoaServiceError::AccountHasChildren.into());
+        }
+
+        if Self::is_account_in_use(ctx, organization_id, template_model.id, account.id).await? {
+            return Err(CoaServiceError::AccountInUse.into());
+        }
+
+        let now = DateHelper::now().value();
+        let result = CoaAccount::Entity::update_many()
+            .col_expr(
+                CoaAccount::Column::Status,
+                sea_orm::sea_query::Expr::value(GenericStatus::Deleted),
+            )
+            .col_expr(
+                CoaAccount::Column::UpdatedByActorId,
+                sea_orm::sea_query::Expr::value(Some(actor_id)),
+            )
+            .col_expr(
+                CoaAccount::Column::UpdatedAt,
+                sea_orm::sea_query::Expr::value(now),
+            )
+            .filter(CoaAccount::Column::OrganizationId.eq(organization_id))
+            .filter(CoaAccount::Column::Id.eq(account.id))
+            .filter(CoaAccount::Column::Status.eq(GenericStatus::Active))
+            .exec(&ctx.app_state.primary_write_replica)
+            .await?;
+
+        if result.rows_affected == 0 {
+            return Err(CoaServiceError::AccountNotFound.into());
+        }
+
+        Ok(())
+    }
+
     pub async fn fetch_default_chart_of_accounts(
         ctx: &ServiceContext,
         view_mode: CoaViewMode,
@@ -92,12 +232,7 @@ impl CoaService {
         let accounts = Self::fetch_template_accounts(ctx, template_model.id).await?;
         // Build the graph once. After this we can render the same data as a
         // flat list or a tree without querying the database again.
-        let graph = TreeGraph::try_new(
-            accounts,
-            |account: &CoaAccount::Model| account.id,
-            |account: &CoaAccount::Model| account.parent_account_id,
-            "COA account",
-        )?;
+        let graph = Self::build_account_graph(accounts)?;
         let template = Self::template_from_model(template_model);
 
         match view_mode {
@@ -148,6 +283,121 @@ impl CoaService {
             .all(&ctx.app_state.primary_read_replica)
             .await
             .map_err(Into::into)
+    }
+
+    async fn fetch_active_template_account_by_id(
+        ctx: &ServiceContext,
+        organization_id: PrimaryId,
+        template_id: PrimaryId,
+        account_id: PrimaryId,
+    ) -> Result<Option<CoaAccount::Model>, AppError> {
+        CoaAccount::Entity::find()
+            .filter(CoaAccount::Column::OrganizationId.eq(organization_id))
+            .filter(CoaAccount::Column::CoaTemplateId.eq(template_id))
+            .filter(CoaAccount::Column::Id.eq(account_id))
+            .filter(CoaAccount::Column::Status.eq(GenericStatus::Active))
+            .one(&ctx.app_state.primary_read_replica)
+            .await
+            .map_err(Into::into)
+    }
+
+    async fn fetch_active_template_account_by_public_id(
+        ctx: &ServiceContext,
+        organization_id: PrimaryId,
+        template_id: PrimaryId,
+        public_id: &str,
+    ) -> Result<Option<CoaAccount::Model>, AppError> {
+        CoaAccount::Entity::find()
+            .filter(CoaAccount::Column::OrganizationId.eq(organization_id))
+            .filter(CoaAccount::Column::CoaTemplateId.eq(template_id))
+            .filter(CoaAccount::Column::PublicId.eq(public_id))
+            .filter(CoaAccount::Column::Status.eq(GenericStatus::Active))
+            .one(&ctx.app_state.primary_read_replica)
+            .await
+            .map_err(Into::into)
+    }
+
+    async fn has_active_child_accounts(
+        ctx: &ServiceContext,
+        organization_id: PrimaryId,
+        template_id: PrimaryId,
+        account_id: PrimaryId,
+    ) -> Result<bool, AppError> {
+        let child = CoaAccount::Entity::find()
+            .filter(CoaAccount::Column::OrganizationId.eq(organization_id))
+            .filter(CoaAccount::Column::CoaTemplateId.eq(template_id))
+            .filter(CoaAccount::Column::ParentAccountId.eq(account_id))
+            .filter(CoaAccount::Column::Status.eq(GenericStatus::Active))
+            .one(&ctx.app_state.primary_read_replica)
+            .await?;
+
+        Ok(child.is_some())
+    }
+
+    async fn is_account_in_use(
+        ctx: &ServiceContext,
+        organization_id: PrimaryId,
+        template_id: PrimaryId,
+        account_id: PrimaryId,
+    ) -> Result<bool, AppError> {
+        if CoaRole::Entity::find()
+            .filter(CoaRole::Column::OrganizationId.eq(organization_id))
+            .filter(CoaRole::Column::CoaTemplateId.eq(template_id))
+            .filter(CoaRole::Column::AccountId.eq(account_id))
+            .filter(CoaRole::Column::Status.eq(GenericStatus::Active))
+            .one(&ctx.app_state.primary_read_replica)
+            .await?
+            .is_some()
+        {
+            return Ok(true);
+        }
+
+        if CoaFlag::Entity::find()
+            .filter(CoaFlag::Column::OrganizationId.eq(organization_id))
+            .filter(CoaFlag::Column::CoaTemplateId.eq(template_id))
+            .filter(CoaFlag::Column::RootAccountId.eq(account_id))
+            .filter(CoaFlag::Column::Status.eq(GenericStatus::Active))
+            .one(&ctx.app_state.primary_read_replica)
+            .await?
+            .is_some()
+        {
+            return Ok(true);
+        }
+
+        let profile = PartyAccountingProfile::Entity::find()
+            .filter(PartyAccountingProfile::Column::OrganizationId.eq(organization_id))
+            .filter(
+                Condition::any()
+                    .add(PartyAccountingProfile::Column::DefaultSalesAccountId.eq(account_id))
+                    .add(PartyAccountingProfile::Column::DefaultPurchaseAccountId.eq(account_id))
+                    .add(PartyAccountingProfile::Column::DefaultReceivableAccountId.eq(account_id))
+                    .add(PartyAccountingProfile::Column::DefaultPayableAccountId.eq(account_id))
+                    .add(PartyAccountingProfile::Column::DefaultOutputTaxAccountId.eq(account_id))
+                    .add(PartyAccountingProfile::Column::DefaultInputTaxAccountId.eq(account_id)),
+            )
+            .one(&ctx.app_state.primary_read_replica)
+            .await?;
+
+        Ok(profile.is_some())
+    }
+
+    fn build_account_graph(
+        accounts: Vec<CoaAccount::Model>,
+    ) -> Result<TreeGraph<CoaAccount::Model, PrimaryId>, AppError> {
+        TreeGraph::try_new(
+            accounts,
+            |account: &CoaAccount::Model| account.id,
+            |account: &CoaAccount::Model| account.parent_account_id,
+            "COA account",
+        )
+    }
+
+    fn is_valid_custom_account_parent(parent: &CoaAccount::Model) -> bool {
+        !parent.is_posting
+            && parent.level_no == 2
+            && parent.parent_account_id.is_some()
+            && parent.account_group_id.is_some()
+            && parent.account_type_id.is_none()
     }
 
     fn template_from_model(template: CoaTemplate::Model) -> ChartOfAccountsTemplate {

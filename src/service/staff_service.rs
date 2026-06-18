@@ -1,4 +1,8 @@
+use std::collections::{HashMap, HashSet};
+
 use crate::config::settings::Settings;
+use crate::db::listing::{PageListResult, execute_page_query, validate_page_pagination};
+use crate::entity::organization::branch_entity::{self as Branch, BranchStatus};
 use crate::entity::organization::organization_entity as Organization;
 use crate::entity::organization::organization_entity::OrganizationModel;
 use crate::entity::staff::staff_branch_entity as StaffBranch;
@@ -7,8 +11,9 @@ use crate::entity::staff::staff_invitation_branch_entity as StaffInvitationBranc
 use crate::entity::staff::staff_invitation_entity::{
     self as StaffInvitation, StaffInvitationStatus,
 };
-use crate::entity::user_entity::UserModel;
-use crate::entity::{GenericStatus, PrimaryId};
+use crate::entity::staff::staff_role_entity as StaffRole;
+use crate::entity::user_entity::{self as User, UserModel};
+use crate::entity::{GenericStatus, PrimaryId, PublicId};
 use crate::errors::app_error::AppError;
 use crate::errors::staff_service_errors::StaffServiceError;
 use crate::service::service_context::ServiceContext;
@@ -16,11 +21,12 @@ use crate::service::user_credential_service::UserCredentialService;
 use crate::service::user_service::UserService;
 use crate::utils::date_helpers::DateHelper;
 use crate::utils::id_generator::IdGenerator;
+use crate::utils::misc_helpers::trim_and_filter_empty;
 use crate::utils::password_helpers::PasswordHelpers;
 use chrono::Utc;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseTransaction, EntityTrait, QueryFilter,
-    Set, TransactionTrait,
+    ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseTransaction, EntityTrait,
+    IntoActiveModel, QueryFilter, QueryOrder, Set, TransactionTrait,
 };
 
 pub struct StaffService;
@@ -36,6 +42,65 @@ pub struct CreateStaffInvitationInput {
 pub struct AcceptStaffInvitationInput {
     pub invitation_token: String,
     pub password: String,
+}
+
+pub struct UpdateStaffInput {
+    pub name_primary: Option<String>,
+    pub name_secondary: Option<String>,
+    pub role_id: Option<PrimaryId>,
+    pub branch_ids: Option<Vec<PrimaryId>>,
+    pub is_default_organization: Option<bool>,
+    pub status: Option<StaffStatus>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StaffSortField {
+    CreatedAt,
+    NamePrimary,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SortDirection {
+    Asc,
+    Desc,
+}
+
+pub struct StaffListPageInput {
+    pub page: u64,
+    pub per_page: u64,
+    pub name: Option<String>,
+    pub status: Option<StaffStatus>,
+    pub sort: Option<StaffSortField>,
+    pub direction: Option<SortDirection>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StaffListItem {
+    pub public_id: PublicId,
+    pub user_public_id: PublicId,
+    pub user_email: String,
+    pub user_first_name: String,
+    pub user_last_name: String,
+    pub name_primary: String,
+    pub name_secondary: Option<String>,
+    pub role_public_id: PublicId,
+    pub is_default_organization: bool,
+    pub status: StaffStatus,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StaffDetail {
+    pub public_id: PublicId,
+    pub user_public_id: PublicId,
+    pub user_email: String,
+    pub user_first_name: String,
+    pub user_last_name: String,
+    pub name_primary: String,
+    pub name_secondary: Option<String>,
+    pub role_public_id: PublicId,
+    pub branch_public_ids: Vec<PublicId>,
+    pub is_default_organization: bool,
+    pub status: StaffStatus,
 }
 
 pub struct StaffInvitationCreated {
@@ -274,6 +339,181 @@ impl StaffService {
         Ok(())
     }
 
+    pub async fn list_staff_page(
+        ctx: &ServiceContext,
+        input: StaffListPageInput,
+    ) -> Result<PageListResult<StaffListItem>, AppError> {
+        let pagination = validate_page_pagination(input.page, input.per_page)?;
+        let organization_id = ctx.get_organization_id()?;
+        let sort_field = input.sort.unwrap_or(StaffSortField::CreatedAt);
+        let sort_direction = input.direction.unwrap_or(SortDirection::Desc);
+
+        let query =
+            Self::build_staff_list_query(organization_id, input.name.as_deref(), input.status);
+        let query = Self::apply_page_sort(query, sort_field, sort_direction);
+
+        let result =
+            execute_page_query(&ctx.app_state.primary_read_replica, query, pagination).await?;
+        let rows = Self::map_staff_list_items(
+            &ctx.app_state.primary_read_replica,
+            organization_id,
+            result.rows,
+        )
+        .await?;
+
+        Ok(PageListResult {
+            rows,
+            meta: result.meta,
+        })
+    }
+
+    pub async fn get_staff(ctx: &ServiceContext, public_id: &str) -> Result<StaffDetail, AppError> {
+        let organization_id = ctx.get_organization_id()?;
+        let staff = Self::find_staff_by_public_id(
+            &ctx.app_state.primary_read_replica,
+            organization_id,
+            public_id,
+        )
+        .await?;
+        let user = User::Entity::find_by_id(staff.user_id)
+            .one(&ctx.app_state.primary_read_replica)
+            .await?
+            .ok_or_else(|| AppError::InternalServer("Staff user not found".into()))?;
+        let role = StaffRole::Entity::find_by_id(staff.role_id)
+            .one(&ctx.app_state.primary_read_replica)
+            .await?
+            .ok_or_else(|| AppError::InternalServer("Staff role not found".into()))?;
+        let branch_public_ids =
+            Self::branch_public_ids_for_staff(ctx, organization_id, staff.id).await?;
+
+        Ok(StaffDetail {
+            public_id: staff.public_id,
+            user_public_id: user.public_id,
+            user_email: user.email,
+            user_first_name: user.first_name,
+            user_last_name: user.last_name,
+            name_primary: staff.name_primary,
+            name_secondary: staff.name_secondary,
+            role_public_id: role.public_id,
+            branch_public_ids,
+            is_default_organization: staff.is_default_organization,
+            status: staff.status,
+        })
+    }
+
+    pub async fn update_staff(
+        ctx: &ServiceContext,
+        public_id: &str,
+        payload: UpdateStaffInput,
+    ) -> Result<StaffDetail, AppError> {
+        let actor_id = ctx.get_actor_id()?;
+        let organization_id = ctx.get_organization_id()?;
+        let now = DateHelper::now().value();
+        let existing = Self::find_staff_by_public_id(
+            &ctx.app_state.primary_write_replica,
+            organization_id,
+            public_id,
+        )
+        .await?;
+        let branch_ids = payload.branch_ids.clone();
+
+        let txn = ctx.app_state.primary_write_replica.begin().await?;
+        if payload.is_default_organization == Some(true) {
+            Self::clear_other_default_organizations(
+                &txn,
+                actor_id,
+                existing.user_id,
+                existing.id,
+                now,
+            )
+            .await?;
+        }
+
+        let mut updated = existing.into_active_model();
+        if let Some(name_primary) = payload.name_primary {
+            updated.name_primary = Set(name_primary);
+        }
+        if payload.name_secondary.is_some() {
+            updated.name_secondary = Set(payload.name_secondary);
+        }
+        if let Some(role_id) = payload.role_id {
+            updated.role_id = Set(role_id);
+        }
+        if let Some(is_default_organization) = payload.is_default_organization {
+            updated.is_default_organization = Set(is_default_organization);
+        }
+        if let Some(status) = payload.status {
+            updated.status = Set(status);
+        }
+        updated.updated_by_actor_id = Set(Some(actor_id));
+        updated.updated_at = Set(now);
+
+        let staff = updated.update(&txn).await?;
+        if let Some(branch_ids) = branch_ids {
+            Self::replace_staff_branches(&txn, actor_id, staff.id, &branch_ids).await?;
+        }
+        txn.commit().await?;
+
+        Self::get_staff(ctx, &staff.public_id).await
+    }
+
+    pub async fn delete_staff(ctx: &ServiceContext, public_id: &str) -> Result<(), AppError> {
+        let actor_id = ctx.get_actor_id()?;
+        let organization_id = ctx.get_organization_id()?;
+        let now = DateHelper::now().value();
+        let staff = Self::find_staff_by_public_id(
+            &ctx.app_state.primary_read_replica,
+            organization_id,
+            public_id,
+        )
+        .await?;
+        let txn = ctx.app_state.primary_write_replica.begin().await?;
+
+        let result = Staff::Entity::update_many()
+            .col_expr(
+                Staff::Column::Status,
+                sea_orm::sea_query::Expr::value(StaffStatus::Deleted),
+            )
+            .col_expr(
+                Staff::Column::UpdatedByActorId,
+                sea_orm::sea_query::Expr::value(Some(actor_id)),
+            )
+            .col_expr(
+                Staff::Column::UpdatedAt,
+                sea_orm::sea_query::Expr::value(now),
+            )
+            .filter(Staff::Column::Id.eq(staff.id))
+            .filter(Staff::Column::Status.ne(StaffStatus::Deleted))
+            .exec(&txn)
+            .await?;
+
+        if result.rows_affected == 0 {
+            return Err(StaffServiceError::NotFound.into());
+        }
+
+        StaffBranch::Entity::update_many()
+            .col_expr(
+                StaffBranch::Column::Status,
+                sea_orm::sea_query::Expr::value(GenericStatus::Deleted),
+            )
+            .col_expr(
+                StaffBranch::Column::UpdatedByActorId,
+                sea_orm::sea_query::Expr::value(Some(actor_id)),
+            )
+            .col_expr(
+                StaffBranch::Column::UpdatedAt,
+                sea_orm::sea_query::Expr::value(now),
+            )
+            .filter(StaffBranch::Column::StaffId.eq(staff.id))
+            .filter(StaffBranch::Column::Status.ne(GenericStatus::Deleted))
+            .exec(&txn)
+            .await?;
+
+        txn.commit().await?;
+
+        Ok(())
+    }
+
     pub async fn create_staff_from_user(
         db_transaction: &impl ConnectionTrait,
         ctx: &ServiceContext,
@@ -363,10 +603,27 @@ impl StaffService {
                 .filter(StaffBranch::Column::StaffId.eq(staff_id))
                 .filter(StaffBranch::Column::BranchId.eq(branch_id))
                 .one(db_transaction)
-                .await?
-                .is_some();
+                .await?;
 
-            if exists {
+            if let Some(existing) = exists {
+                if existing.status != GenericStatus::Active {
+                    StaffBranch::Entity::update_many()
+                        .col_expr(
+                            StaffBranch::Column::Status,
+                            sea_orm::sea_query::Expr::value(GenericStatus::Active),
+                        )
+                        .col_expr(
+                            StaffBranch::Column::UpdatedByActorId,
+                            sea_orm::sea_query::Expr::value(Some(actor_id)),
+                        )
+                        .col_expr(
+                            StaffBranch::Column::UpdatedAt,
+                            sea_orm::sea_query::Expr::value(now),
+                        )
+                        .filter(StaffBranch::Column::Id.eq(existing.id))
+                        .exec(db_transaction)
+                        .await?;
+                }
                 continue;
             }
 
@@ -383,6 +640,66 @@ impl StaffService {
             .insert(db_transaction)
             .await?;
         }
+
+        Ok(())
+    }
+
+    async fn replace_staff_branches(
+        db_transaction: &impl ConnectionTrait,
+        actor_id: PrimaryId,
+        staff_id: PrimaryId,
+        branch_ids: &[PrimaryId],
+    ) -> Result<(), AppError> {
+        let now = DateHelper::now().value();
+        let desired_branch_ids = branch_ids.iter().copied().collect::<HashSet<_>>();
+
+        StaffBranch::Entity::update_many()
+            .col_expr(
+                StaffBranch::Column::Status,
+                sea_orm::sea_query::Expr::value(GenericStatus::Deleted),
+            )
+            .col_expr(
+                StaffBranch::Column::UpdatedByActorId,
+                sea_orm::sea_query::Expr::value(Some(actor_id)),
+            )
+            .col_expr(
+                StaffBranch::Column::UpdatedAt,
+                sea_orm::sea_query::Expr::value(now),
+            )
+            .filter(StaffBranch::Column::StaffId.eq(staff_id))
+            .filter(StaffBranch::Column::Status.eq(GenericStatus::Active))
+            .filter(StaffBranch::Column::BranchId.is_not_in(desired_branch_ids))
+            .exec(db_transaction)
+            .await?;
+
+        Self::attach_staff_to_branches(db_transaction, actor_id, staff_id, branch_ids).await
+    }
+
+    async fn clear_other_default_organizations(
+        db_transaction: &impl ConnectionTrait,
+        actor_id: PrimaryId,
+        user_id: PrimaryId,
+        staff_id: PrimaryId,
+        now: chrono::DateTime<chrono::Utc>,
+    ) -> Result<(), AppError> {
+        Staff::Entity::update_many()
+            .col_expr(
+                Staff::Column::IsDefaultOrganization,
+                sea_orm::sea_query::Expr::value(false),
+            )
+            .col_expr(
+                Staff::Column::UpdatedByActorId,
+                sea_orm::sea_query::Expr::value(Some(actor_id)),
+            )
+            .col_expr(
+                Staff::Column::UpdatedAt,
+                sea_orm::sea_query::Expr::value(now),
+            )
+            .filter(Staff::Column::UserId.eq(user_id))
+            .filter(Staff::Column::Id.ne(staff_id))
+            .filter(Staff::Column::Status.ne(StaffStatus::Deleted))
+            .exec(db_transaction)
+            .await?;
 
         Ok(())
     }
@@ -615,5 +932,162 @@ impl StaffService {
             .one(db_transaction)
             .await?
             .ok_or(StaffServiceError::InvitationNotFound.into())
+    }
+
+    async fn find_staff_by_public_id(
+        db: &impl ConnectionTrait,
+        organization_id: PrimaryId,
+        public_id: &str,
+    ) -> Result<Staff::Model, AppError> {
+        Staff::Entity::find()
+            .filter(Staff::Column::OrganizationId.eq(organization_id))
+            .filter(Staff::Column::PublicId.eq(public_id))
+            .filter(Staff::Column::Status.ne(StaffStatus::Deleted))
+            .one(db)
+            .await?
+            .ok_or_else(|| StaffServiceError::NotFound.into())
+    }
+
+    fn build_staff_list_query(
+        organization_id: PrimaryId,
+        name: Option<&str>,
+        status: Option<StaffStatus>,
+    ) -> sea_orm::Select<Staff::Entity> {
+        let mut query =
+            Staff::Entity::find().filter(Staff::Column::OrganizationId.eq(organization_id));
+
+        if let Some(name) = trim_and_filter_empty(name) {
+            query = query.filter(Staff::Column::NamePrimary.contains(name));
+        }
+
+        if let Some(status) = status {
+            query = query.filter(Staff::Column::Status.eq(status));
+        } else {
+            query = query.filter(Staff::Column::Status.ne(StaffStatus::Deleted));
+        }
+
+        query
+    }
+
+    fn apply_page_sort(
+        query: sea_orm::Select<Staff::Entity>,
+        sort_field: StaffSortField,
+        sort_direction: SortDirection,
+    ) -> sea_orm::Select<Staff::Entity> {
+        match (sort_field, sort_direction) {
+            (StaffSortField::CreatedAt, SortDirection::Asc) => query
+                .order_by_asc(Staff::Column::CreatedAt)
+                .order_by_asc(Staff::Column::Id),
+            (StaffSortField::CreatedAt, SortDirection::Desc) => query
+                .order_by_desc(Staff::Column::CreatedAt)
+                .order_by_desc(Staff::Column::Id),
+            (StaffSortField::NamePrimary, SortDirection::Asc) => query
+                .order_by_asc(Staff::Column::NamePrimary)
+                .order_by_asc(Staff::Column::Id),
+            (StaffSortField::NamePrimary, SortDirection::Desc) => query
+                .order_by_desc(Staff::Column::NamePrimary)
+                .order_by_desc(Staff::Column::Id),
+        }
+    }
+
+    async fn map_staff_list_items(
+        db: &impl ConnectionTrait,
+        organization_id: PrimaryId,
+        staffs: Vec<Staff::Model>,
+    ) -> Result<Vec<StaffListItem>, AppError> {
+        if staffs.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let user_ids = staffs
+            .iter()
+            .map(|staff| staff.user_id)
+            .collect::<HashSet<_>>();
+        let role_ids = staffs
+            .iter()
+            .map(|staff| staff.role_id)
+            .collect::<HashSet<_>>();
+
+        let users = User::Entity::find()
+            .filter(User::Column::Id.is_in(user_ids))
+            .all(db)
+            .await?
+            .into_iter()
+            .map(|user| (user.id, user))
+            .collect::<HashMap<_, _>>();
+        let roles = StaffRole::Entity::find()
+            .filter(StaffRole::Column::OrganizationId.eq(organization_id))
+            .filter(StaffRole::Column::Id.is_in(role_ids))
+            .all(db)
+            .await?
+            .into_iter()
+            .map(|role| (role.id, role))
+            .collect::<HashMap<_, _>>();
+
+        staffs
+            .into_iter()
+            .map(|staff| {
+                let user = users
+                    .get(&staff.user_id)
+                    .ok_or_else(|| AppError::InternalServer("Staff user not found".into()))?;
+                let role = roles
+                    .get(&staff.role_id)
+                    .ok_or_else(|| AppError::InternalServer("Staff role not found".into()))?;
+
+                Ok(StaffListItem {
+                    public_id: staff.public_id,
+                    user_public_id: user.public_id.clone(),
+                    user_email: user.email.clone(),
+                    user_first_name: user.first_name.clone(),
+                    user_last_name: user.last_name.clone(),
+                    name_primary: staff.name_primary,
+                    name_secondary: staff.name_secondary,
+                    role_public_id: role.public_id.clone(),
+                    is_default_organization: staff.is_default_organization,
+                    status: staff.status,
+                })
+            })
+            .collect()
+    }
+
+    async fn branch_public_ids_for_staff(
+        ctx: &ServiceContext,
+        organization_id: PrimaryId,
+        staff_id: PrimaryId,
+    ) -> Result<Vec<PublicId>, AppError> {
+        let staff_branches = StaffBranch::Entity::find()
+            .filter(StaffBranch::Column::StaffId.eq(staff_id))
+            .filter(StaffBranch::Column::Status.eq(GenericStatus::Active))
+            .order_by_asc(StaffBranch::Column::Id)
+            .all(&ctx.app_state.primary_read_replica)
+            .await?;
+        let branch_ids = staff_branches
+            .iter()
+            .map(|staff_branch| staff_branch.branch_id)
+            .collect::<Vec<_>>();
+
+        if branch_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let branches = Branch::Entity::find()
+            .filter(Branch::Column::OrganizationId.eq(organization_id))
+            .filter(Branch::Column::Id.is_in(branch_ids.iter().copied()))
+            .filter(Branch::Column::Status.ne(BranchStatus::Deleted))
+            .all(&ctx.app_state.primary_read_replica)
+            .await?
+            .into_iter()
+            .map(|branch| (branch.id, branch.public_id))
+            .collect::<HashMap<_, _>>();
+
+        branch_ids
+            .into_iter()
+            .map(|branch_id| {
+                branches
+                    .get(&branch_id)
+                    .cloned()
+                    .ok_or_else(|| AppError::InternalServer("Staff branch not found".into()))
+            })
+            .collect()
     }
 }

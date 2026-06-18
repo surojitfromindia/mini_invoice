@@ -13,6 +13,12 @@ pub enum Permission {
     StaffInvitationResend,
     StaffInvitationRevoke,
     StaffRoleCreate,
+    StaffRoleRead,
+    StaffRoleUpdate,
+    StaffRoleDelete,
+    StaffRead,
+    StaffUpdate,
+    StaffDelete,
 }
 
 impl Permission {
@@ -23,6 +29,12 @@ impl Permission {
             Self::StaffInvitationResend => "staff.invitation.resend",
             Self::StaffInvitationRevoke => "staff.invitation.revoke",
             Self::StaffRoleCreate => "staff.role.create",
+            Self::StaffRoleRead => "staff.role.read",
+            Self::StaffRoleUpdate => "staff.role.update",
+            Self::StaffRoleDelete => "staff.role.delete",
+            Self::StaffRead => "staff.read",
+            Self::StaffUpdate => "staff.update",
+            Self::StaffDelete => "staff.delete",
         }
     }
 
@@ -33,6 +45,12 @@ impl Permission {
             "staff.invitation.resend" => Some(Self::StaffInvitationResend),
             "staff.invitation.revoke" => Some(Self::StaffInvitationRevoke),
             "staff.role.create" => Some(Self::StaffRoleCreate),
+            "staff.role.read" => Some(Self::StaffRoleRead),
+            "staff.role.update" => Some(Self::StaffRoleUpdate),
+            "staff.role.delete" => Some(Self::StaffRoleDelete),
+            "staff.read" => Some(Self::StaffRead),
+            "staff.update" => Some(Self::StaffUpdate),
+            "staff.delete" => Some(Self::StaffDelete),
             _ => None,
         }
     }
@@ -44,6 +62,12 @@ impl Permission {
             Self::StaffInvitationResend,
             Self::StaffInvitationRevoke,
             Self::StaffRoleCreate,
+            Self::StaffRoleRead,
+            Self::StaffRoleUpdate,
+            Self::StaffRoleDelete,
+            Self::StaffRead,
+            Self::StaffUpdate,
+            Self::StaffDelete,
         ]
         .into_iter()
         .map(|permission| permission.code().to_string())

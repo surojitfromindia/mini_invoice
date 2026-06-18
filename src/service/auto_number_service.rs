@@ -3,7 +3,7 @@ use std::collections::{BTreeMap, HashMap};
 use chrono::{DateTime, Datelike, Utc};
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseTransaction, EntityTrait, FromQueryResult,
-    IntoActiveModel, QueryFilter, QueryOrder, QuerySelect, Set, TransactionTrait,
+    IntoActiveModel, QueryFilter, QueryOrder, QuerySelect, Set,
 };
 
 use crate::db::listing::{PageListResult, execute_page_query, validate_page_pagination};
@@ -17,15 +17,62 @@ use crate::entity::auto_number::auto_number_series_entity::{
 use crate::entity::organization::branch_entity as Branch;
 use crate::entity::{PrimaryId, PublicId};
 use crate::errors::app_error::AppError;
-use crate::errors::error_codes;
+use crate::errors::auto_number_service_errors::AutoNumberServiceError;
 use crate::service::service_context::ServiceContext;
 use crate::utils::date_helpers::DateHelper;
 use crate::utils::id_generator::IdGenerator;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum AutoNumberSeriesKey {
+    Customer,
+    Vendor,
+    Invoice,
+    Collection,
+    Payment,
+    CreditNote,
+    SalesOrder,
+    Bill,
+    VendorCredit,
+    PurchaseOrder,
+}
+
+impl AutoNumberSeriesKey {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Customer => "customer",
+            Self::Vendor => "vendor",
+            Self::Invoice => "invoice",
+            Self::Collection => "collection",
+            Self::Payment => "payment",
+            Self::CreditNote => "credit_note",
+            Self::SalesOrder => "sales_order",
+            Self::Bill => "bill",
+            Self::VendorCredit => "vendor_credit",
+            Self::PurchaseOrder => "purchase_order",
+        }
+    }
+
+    pub fn parse(series_key: &str) -> Result<Self, AppError> {
+        match series_key.trim() {
+            "customer" => Ok(Self::Customer),
+            "vendor" => Ok(Self::Vendor),
+            "invoice" => Ok(Self::Invoice),
+            "collection" => Ok(Self::Collection),
+            "payment" => Ok(Self::Payment),
+            "credit_note" => Ok(Self::CreditNote),
+            "sales_order" => Ok(Self::SalesOrder),
+            "bill" => Ok(Self::Bill),
+            "vendor_credit" => Ok(Self::VendorCredit),
+            "purchase_order" => Ok(Self::PurchaseOrder),
+            _ => Err(AutoNumberServiceError::InvalidSeriesKey.into()),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AutoNumberRequest {
     pub branch_id: PrimaryId,
-    pub series_key: String,
+    pub series_key: AutoNumberSeriesKey,
     pub quantity: u32,
 }
 
@@ -33,14 +80,14 @@ pub struct AutoNumberRequest {
 pub struct AutoNumberAllocationResult {
     pub allocation_public_id: PublicId,
     pub branch_id: PrimaryId,
-    pub series_key: String,
+    pub series_key: AutoNumberSeriesKey,
     pub sequence_number: i64,
     pub formatted_number: String,
 }
 
 pub struct CreateAutoNumberSeriesInput {
     pub branch_id: PrimaryId,
-    pub series_key: String,
+    pub series_key: AutoNumberSeriesKey,
     pub prefix_template: String,
     pub suffix_template: Option<String>,
     pub padding_width: i16,
@@ -52,7 +99,7 @@ pub struct CreateAutoNumberSeriesInput {
 
 pub struct UpdateAutoNumberSeriesInput {
     pub branch_id: Option<PrimaryId>,
-    pub series_key: Option<String>,
+    pub series_key: Option<AutoNumberSeriesKey>,
     pub prefix_template: Option<String>,
     pub suffix_template: Option<String>,
     pub padding_width: Option<i16>,
@@ -79,7 +126,7 @@ pub struct AutoNumberSeriesListPageInput {
     pub page: u64,
     pub per_page: u64,
     pub branch_id: Option<PrimaryId>,
-    pub series_key: Option<String>,
+    pub series_key: Option<AutoNumberSeriesKey>,
     pub status: Option<AutoNumberStatus>,
     pub sort: Option<AutoNumberSeriesSortField>,
     pub direction: Option<SortDirection>,
@@ -103,7 +150,7 @@ pub struct AutoNumberSeriesListItemRaw {
 pub struct AutoNumberSeriesListItem {
     pub public_id: PublicId,
     pub branch_public_id: PublicId,
-    pub series_key: String,
+    pub series_key: AutoNumberSeriesKey,
     pub prefix_template: String,
     pub suffix_template: Option<String>,
     pub padding_width: i16,
@@ -117,7 +164,7 @@ pub struct AutoNumberSeriesListItem {
 pub struct AutoNumberSeriesDetail {
     pub public_id: PublicId,
     pub branch_public_id: PublicId,
-    pub series_key: String,
+    pub series_key: AutoNumberSeriesKey,
     pub prefix_template: String,
     pub suffix_template: Option<String>,
     pub padding_width: i16,
@@ -137,12 +184,11 @@ impl AutoNumberService {
         let actor_id = ctx.get_actor_id()?;
         let organization_id = ctx.get_organization_id()?;
         let now = DateHelper::now().value();
-        let series_key = Self::normalize_series_key(payload.series_key)?;
 
         let series = AutoNumberSeries::ActiveModel {
             organization_id: Set(organization_id),
             branch_id: Set(payload.branch_id),
-            series_key: Set(series_key),
+            series_key: Set(payload.series_key.as_str().to_string()),
             public_id: Set(IdGenerator::generate_general_id()),
             prefix_template: Set(payload.prefix_template),
             suffix_template: Set(payload.suffix_template),
@@ -194,7 +240,7 @@ impl AutoNumberService {
         let query = Self::build_series_list_query(
             organization_id,
             input.branch_id,
-            input.series_key.as_deref(),
+            input.series_key,
             input.status,
         );
         let query = Self::apply_series_page_sort(query, sort_field, sort_direction);
@@ -210,7 +256,16 @@ impl AutoNumberService {
         )
         .await?;
 
-        Ok(result.map_rows(|row| Self::map_series_list_item(row, &branch_public_ids)))
+        let rows = result
+            .rows
+            .into_iter()
+            .map(|row| Self::map_series_list_item(row, &branch_public_ids))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(PageListResult {
+            rows,
+            meta: result.meta,
+        })
     }
 
     pub async fn get_series(
@@ -231,7 +286,7 @@ impl AutoNumberService {
         )
         .await?;
 
-        Ok(Self::map_series_detail(series, branch_public_id))
+        Self::map_series_detail(series, branch_public_id)
     }
 
     pub async fn update_series(
@@ -254,7 +309,7 @@ impl AutoNumberService {
             updated.branch_id = Set(branch_id);
         }
         if let Some(series_key) = payload.series_key {
-            updated.series_key = Set(Self::normalize_series_key(series_key)?);
+            updated.series_key = Set(series_key.as_str().to_string());
         }
         if let Some(prefix_template) = payload.prefix_template {
             updated.prefix_template = Set(prefix_template);
@@ -308,7 +363,7 @@ impl AutoNumberService {
         )
         .await?;
 
-        Ok(Self::map_series_detail(updated, branch_public_id))
+        Self::map_series_detail(updated, branch_public_id)
     }
 
     pub async fn delete_series(ctx: &ServiceContext, public_id: &str) -> Result<(), AppError> {
@@ -336,64 +391,27 @@ impl AutoNumberService {
             .await?;
 
         if result.rows_affected == 0 {
-            return Err(Self::series_not_found());
+            return Err(AutoNumberServiceError::SeriesNotFound.into());
         }
 
         Ok(())
     }
 
-    pub async fn allocate_one(
-        ctx: &ServiceContext,
-        branch_id: PrimaryId,
-        series_key: impl Into<String>,
-    ) -> Result<AutoNumberAllocationResult, AppError> {
-        let mut allocations = Self::allocate_many(
-            ctx,
-            vec![AutoNumberRequest {
-                branch_id,
-                series_key: series_key.into(),
-                quantity: 1,
-            }],
-        )
-        .await?;
-
-        allocations
-            .pop()
-            .ok_or_else(|| AppError::InternalServer("Auto number allocation failed".into()))
-    }
-
-    pub async fn allocate_many(
-        ctx: &ServiceContext,
-        requests: Vec<AutoNumberRequest>,
-    ) -> Result<Vec<AutoNumberAllocationResult>, AppError> {
-        let actor_id = ctx.get_actor_id()?;
-        let organization_id = ctx.get_organization_id()?;
-        let txn = ctx.app_state.primary_write_replica.begin().await?;
-
-        let allocations =
-            Self::allocate_many_in_transaction(&txn, actor_id, organization_id, requests, None)
-                .await?;
-
-        txn.commit().await?;
-
-        Ok(allocations)
-    }
-
-    pub async fn allocate_one_for_target_in_transaction(
+    pub async fn allocate_one_for_target(
         txn: &DatabaseTransaction,
         actor_id: PrimaryId,
         organization_id: PrimaryId,
         branch_id: PrimaryId,
-        series_key: impl Into<String>,
+        series_key: AutoNumberSeriesKey,
         target_public_id: PublicId,
     ) -> Result<AutoNumberAllocationResult, AppError> {
-        let mut allocations = Self::allocate_many_in_transaction(
+        let mut allocations = Self::allocate_many(
             txn,
             actor_id,
             organization_id,
             vec![AutoNumberRequest {
                 branch_id,
-                series_key: series_key.into(),
+                series_key,
                 quantity: 1,
             }],
             Some(target_public_id),
@@ -405,7 +423,7 @@ impl AutoNumberService {
             .ok_or_else(|| AppError::InternalServer("Auto number allocation failed".into()))
     }
 
-    async fn allocate_many_in_transaction(
+    pub async fn allocate_many(
         txn: &DatabaseTransaction,
         actor_id: PrimaryId,
         organization_id: PrimaryId,
@@ -418,7 +436,7 @@ impl AutoNumberService {
 
         for ((branch_id, series_key), quantity) in grouped_requests {
             let series =
-                Self::lock_active_series(txn, organization_id, branch_id, &series_key).await?;
+                Self::lock_active_series(txn, organization_id, branch_id, series_key).await?;
             Self::validate_series_config(&series)?;
 
             let period_key = Self::period_key(&series.reset_policy, now);
@@ -450,7 +468,7 @@ impl AutoNumberService {
                     organization_id: Set(organization_id),
                     branch_id: Set(branch_id),
                     series_id: Set(series.id),
-                    series_key: Set(series_key.clone()),
+                    series_key: Set(series_key.as_str().to_string()),
                     period_key: Set(period_key.clone()),
                     sequence_number: Set(sequence_number),
                     formatted_number: Set(formatted_number),
@@ -466,7 +484,7 @@ impl AutoNumberService {
                 allocations.push(AutoNumberAllocationResult {
                     allocation_public_id: allocation.public_id,
                     branch_id,
-                    series_key: series_key.clone(),
+                    series_key,
                     sequence_number,
                     formatted_number: allocation.formatted_number,
                 });
@@ -484,36 +502,22 @@ impl AutoNumberService {
 
     fn group_requests(
         requests: Vec<AutoNumberRequest>,
-    ) -> Result<BTreeMap<(PrimaryId, String), u32>, AppError> {
+    ) -> Result<BTreeMap<(PrimaryId, AutoNumberSeriesKey), u32>, AppError> {
         let mut grouped_requests = BTreeMap::new();
 
         for request in requests {
             if request.quantity == 0 {
-                return Err(Self::bad_request(
-                    error_codes::AUTO_NUMBER_INVALID_QUANTITY,
-                    "Auto number quantity must be greater than zero",
-                ));
-            }
-
-            let series_key = request.series_key.trim().to_string();
-            if series_key.is_empty() {
-                return Err(Self::bad_request(
-                    error_codes::AUTO_NUMBER_INVALID_SERIES_KEY,
-                    "Auto number series key is required",
-                ));
+                return Err(AutoNumberServiceError::InvalidQuantity.into());
             }
 
             grouped_requests
-                .entry((request.branch_id, series_key))
+                .entry((request.branch_id, request.series_key))
                 .and_modify(|quantity| *quantity += request.quantity)
                 .or_insert(request.quantity);
         }
 
         if grouped_requests.is_empty() {
-            return Err(Self::bad_request(
-                error_codes::AUTO_NUMBER_INVALID_QUANTITY,
-                "At least one auto number request is required",
-            ));
+            return Err(AutoNumberServiceError::RequestsRequired.into());
         }
 
         Ok(grouped_requests)
@@ -523,22 +527,17 @@ impl AutoNumberService {
         txn: &DatabaseTransaction,
         organization_id: PrimaryId,
         branch_id: PrimaryId,
-        series_key: &str,
+        series_key: AutoNumberSeriesKey,
     ) -> Result<AutoNumberSeriesModel, AppError> {
         AutoNumberSeries::Entity::find()
             .filter(AutoNumberSeries::Column::OrganizationId.eq(organization_id))
             .filter(AutoNumberSeries::Column::BranchId.eq(branch_id))
-            .filter(AutoNumberSeries::Column::SeriesKey.eq(series_key))
+            .filter(AutoNumberSeries::Column::SeriesKey.eq(series_key.as_str()))
             .filter(AutoNumberSeries::Column::Status.eq(AutoNumberStatus::Active))
             .lock_exclusive()
             .one(txn)
             .await?
-            .ok_or_else(|| {
-                Self::bad_request(
-                    error_codes::AUTO_NUMBER_SERIES_NOT_FOUND,
-                    "Active auto number series not found",
-                )
-            })
+            .ok_or_else(|| AutoNumberServiceError::SeriesNotFound.into())
     }
 
     async fn lock_or_create_counter(
@@ -574,22 +573,13 @@ impl AutoNumberService {
 
     fn validate_series_config(series: &AutoNumberSeriesModel) -> Result<(), AppError> {
         if series.padding_width <= 0 {
-            return Err(Self::bad_request(
-                error_codes::AUTO_NUMBER_INVALID_CONFIG,
-                "Auto number padding width must be greater than zero",
-            ));
+            return Err(AutoNumberServiceError::InvalidPaddingWidth.into());
         }
         if series.start_number <= 0 {
-            return Err(Self::bad_request(
-                error_codes::AUTO_NUMBER_INVALID_CONFIG,
-                "Auto number start number must be greater than zero",
-            ));
+            return Err(AutoNumberServiceError::InvalidStartNumber.into());
         }
         if series.increment_by <= 0 {
-            return Err(Self::bad_request(
-                error_codes::AUTO_NUMBER_INVALID_CONFIG,
-                "Auto number increment must be greater than zero",
-            ));
+            return Err(AutoNumberServiceError::InvalidIncrement.into());
         }
 
         let template = format!(
@@ -606,10 +596,7 @@ impl AutoNumberService {
 
         if let Some(required_token) = required_token {
             if !template.contains(required_token) {
-                return Err(Self::bad_request(
-                    error_codes::AUTO_NUMBER_INVALID_CONFIG,
-                    "Auto number reset policy requires a matching period token",
-                ));
+                return Err(AutoNumberServiceError::ResetPolicyTokenMissing.into());
             }
         }
 
@@ -659,12 +646,8 @@ impl AutoNumberService {
         padding_width: i16,
         suffix: &str,
     ) -> Result<String, AppError> {
-        let padding_width = usize::try_from(padding_width).map_err(|_| {
-            Self::bad_request(
-                error_codes::AUTO_NUMBER_INVALID_CONFIG,
-                "Auto number padding width is invalid",
-            )
-        })?;
+        let padding_width = usize::try_from(padding_width)
+            .map_err(|_| AppError::from(AutoNumberServiceError::InvalidPaddingWidth))?;
 
         Ok(format!(
             "{prefix}{sequence_number:0padding_width$}{suffix}",
@@ -683,13 +666,13 @@ impl AutoNumberService {
             .filter(AutoNumberSeries::Column::Status.ne(AutoNumberStatus::Deleted))
             .one(db)
             .await?
-            .ok_or_else(Self::series_not_found)
+            .ok_or_else(|| AutoNumberServiceError::SeriesNotFound.into())
     }
 
     fn build_series_list_query(
         organization_id: PrimaryId,
         branch_id: Option<PrimaryId>,
-        series_key: Option<&str>,
+        series_key: Option<AutoNumberSeriesKey>,
         status: Option<AutoNumberStatus>,
     ) -> sea_orm::Select<AutoNumberSeries::Entity> {
         let mut query = AutoNumberSeries::Entity::find()
@@ -699,8 +682,8 @@ impl AutoNumberService {
             query = query.filter(AutoNumberSeries::Column::BranchId.eq(branch_id));
         }
 
-        if let Some(series_key) = series_key.map(str::trim).filter(|value| !value.is_empty()) {
-            query = query.filter(AutoNumberSeries::Column::SeriesKey.contains(series_key));
+        if let Some(series_key) = series_key {
+            query = query.filter(AutoNumberSeries::Column::SeriesKey.eq(series_key.as_str()));
         }
 
         if let Some(status) = status {
@@ -788,14 +771,14 @@ impl AutoNumberService {
     fn map_series_list_item(
         row: AutoNumberSeriesListItemRaw,
         branch_public_ids: &HashMap<PrimaryId, PublicId>,
-    ) -> AutoNumberSeriesListItem {
-        AutoNumberSeriesListItem {
+    ) -> Result<AutoNumberSeriesListItem, AppError> {
+        Ok(AutoNumberSeriesListItem {
             branch_public_id: branch_public_ids
                 .get(&row.branch_id)
                 .cloned()
                 .unwrap_or_default(),
             public_id: row.public_id,
-            series_key: row.series_key,
+            series_key: AutoNumberSeriesKey::parse(&row.series_key)?,
             prefix_template: row.prefix_template,
             suffix_template: row.suffix_template,
             padding_width: row.padding_width,
@@ -803,17 +786,17 @@ impl AutoNumberService {
             increment_by: row.increment_by,
             reset_policy: row.reset_policy,
             status: row.status,
-        }
+        })
     }
 
     fn map_series_detail(
         series: AutoNumberSeriesModel,
         branch_public_id: PublicId,
-    ) -> AutoNumberSeriesDetail {
-        AutoNumberSeriesDetail {
+    ) -> Result<AutoNumberSeriesDetail, AppError> {
+        Ok(AutoNumberSeriesDetail {
             public_id: series.public_id,
             branch_public_id,
-            series_key: series.series_key,
+            series_key: AutoNumberSeriesKey::parse(&series.series_key)?,
             prefix_template: series.prefix_template,
             suffix_template: series.suffix_template,
             padding_width: series.padding_width,
@@ -821,33 +804,7 @@ impl AutoNumberService {
             increment_by: series.increment_by,
             reset_policy: series.reset_policy,
             status: series.status,
-        }
-    }
-
-    fn normalize_series_key(series_key: impl Into<String>) -> Result<String, AppError> {
-        let series_key = series_key.into().trim().to_string();
-        if series_key.is_empty() {
-            return Err(Self::bad_request(
-                error_codes::AUTO_NUMBER_INVALID_SERIES_KEY,
-                "Auto number series key is required",
-            ));
-        }
-
-        Ok(series_key)
-    }
-
-    fn series_not_found() -> AppError {
-        Self::bad_request(
-            error_codes::AUTO_NUMBER_SERIES_NOT_FOUND,
-            "Auto number series not found",
-        )
-    }
-
-    fn bad_request(code: &'static str, message: impl Into<String>) -> AppError {
-        AppError::BadRequest {
-            code,
-            message: message.into(),
-        }
+        })
     }
 }
 

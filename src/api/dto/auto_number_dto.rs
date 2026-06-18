@@ -7,10 +7,57 @@ use crate::entity::auto_number::auto_number_series_entity::{
     AutoNumberResetPolicy, AutoNumberStatus,
 };
 use crate::service::auto_number_service::{
-    AutoNumberSeriesDetail, AutoNumberSeriesListItem, AutoNumberSeriesListPageInput,
-    AutoNumberSeriesSortField, CreateAutoNumberSeriesInput, SortDirection,
-    UpdateAutoNumberSeriesInput,
+    AutoNumberSeriesDetail, AutoNumberSeriesKey, AutoNumberSeriesListItem,
+    AutoNumberSeriesListPageInput, AutoNumberSeriesSortField, CreateAutoNumberSeriesInput,
+    SortDirection, UpdateAutoNumberSeriesInput,
 };
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum AutoNumberSeriesKeyDto {
+    Customer,
+    Vendor,
+    Invoice,
+    Collection,
+    Payment,
+    CreditNote,
+    SalesOrder,
+    Bill,
+    VendorCredit,
+    PurchaseOrder,
+}
+
+impl AutoNumberSeriesKeyDto {
+    pub fn into_service_input(self) -> AutoNumberSeriesKey {
+        match self {
+            Self::Customer => AutoNumberSeriesKey::Customer,
+            Self::Vendor => AutoNumberSeriesKey::Vendor,
+            Self::Invoice => AutoNumberSeriesKey::Invoice,
+            Self::Collection => AutoNumberSeriesKey::Collection,
+            Self::Payment => AutoNumberSeriesKey::Payment,
+            Self::CreditNote => AutoNumberSeriesKey::CreditNote,
+            Self::SalesOrder => AutoNumberSeriesKey::SalesOrder,
+            Self::Bill => AutoNumberSeriesKey::Bill,
+            Self::VendorCredit => AutoNumberSeriesKey::VendorCredit,
+            Self::PurchaseOrder => AutoNumberSeriesKey::PurchaseOrder,
+        }
+    }
+
+    pub fn from_service_output(series_key: AutoNumberSeriesKey) -> Self {
+        match series_key {
+            AutoNumberSeriesKey::Customer => Self::Customer,
+            AutoNumberSeriesKey::Vendor => Self::Vendor,
+            AutoNumberSeriesKey::Invoice => Self::Invoice,
+            AutoNumberSeriesKey::Collection => Self::Collection,
+            AutoNumberSeriesKey::Payment => Self::Payment,
+            AutoNumberSeriesKey::CreditNote => Self::CreditNote,
+            AutoNumberSeriesKey::SalesOrder => Self::SalesOrder,
+            AutoNumberSeriesKey::Bill => Self::Bill,
+            AutoNumberSeriesKey::VendorCredit => Self::VendorCredit,
+            AutoNumberSeriesKey::PurchaseOrder => Self::PurchaseOrder,
+        }
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
@@ -71,7 +118,7 @@ impl AutoNumberStatusDto {
 #[serde(rename_all = "camelCase")]
 pub struct CreateAutoNumberSeriesRequestDto {
     pub branch_public_id: String,
-    pub series_key: String,
+    pub series_key: AutoNumberSeriesKeyDto,
     pub prefix_template: String,
     pub suffix_template: Option<String>,
     pub padding_width: i16,
@@ -85,7 +132,7 @@ pub struct CreateAutoNumberSeriesRequestDto {
 #[serde(rename_all = "camelCase")]
 pub struct UpdateAutoNumberSeriesRequestDto {
     pub branch_public_id: Option<String>,
-    pub series_key: Option<String>,
+    pub series_key: Option<AutoNumberSeriesKeyDto>,
     pub prefix_template: Option<String>,
     pub suffix_template: Option<String>,
     pub padding_width: Option<i16>,
@@ -116,7 +163,7 @@ pub struct AutoNumberSeriesListPageQueryDto {
     #[serde(flatten)]
     pub pagination: PagePaginationQuery,
     pub branch_public_id: Option<String>,
-    pub series_key: Option<String>,
+    pub series_key: Option<AutoNumberSeriesKeyDto>,
     pub status: Option<AutoNumberStatusDto>,
     pub sort: Option<AutoNumberSeriesSortFieldDto>,
     pub direction: Option<SortDirectionDto>,
@@ -127,7 +174,7 @@ pub struct AutoNumberSeriesListPageResolutionInput {
     pub page: u64,
     pub per_page: u64,
     pub branch_public_id: Option<String>,
-    pub series_key: Option<String>,
+    pub series_key: Option<AutoNumberSeriesKeyDto>,
     pub status: Option<AutoNumberStatusDto>,
     pub sort: Option<AutoNumberSeriesSortFieldDto>,
     pub direction: Option<SortDirectionDto>,
@@ -136,7 +183,7 @@ pub struct AutoNumberSeriesListPageResolutionInput {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CreateAutoNumberSeriesResolutionInput {
     pub branch_public_id: String,
-    pub series_key: String,
+    pub series_key: AutoNumberSeriesKeyDto,
     pub prefix_template: String,
     pub suffix_template: Option<String>,
     pub padding_width: i16,
@@ -149,7 +196,7 @@ pub struct CreateAutoNumberSeriesResolutionInput {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UpdateAutoNumberSeriesResolutionInput {
     pub branch_public_id: Option<String>,
-    pub series_key: Option<String>,
+    pub series_key: Option<AutoNumberSeriesKeyDto>,
     pub prefix_template: Option<String>,
     pub suffix_template: Option<String>,
     pub padding_width: Option<i16>,
@@ -214,7 +261,9 @@ impl AutoNumberSeriesListPageResolutionInput {
             page: self.page,
             per_page: self.per_page,
             branch_id,
-            series_key: self.series_key,
+            series_key: self
+                .series_key
+                .map(AutoNumberSeriesKeyDto::into_service_input),
             status: self.status.map(AutoNumberStatusDto::into_service_input),
             sort: self.sort.map(|sort| match sort {
                 AutoNumberSeriesSortFieldDto::CreatedAt => AutoNumberSeriesSortField::CreatedAt,
@@ -236,7 +285,7 @@ impl CreateAutoNumberSeriesResolutionInput {
     ) -> CreateAutoNumberSeriesInput {
         CreateAutoNumberSeriesInput {
             branch_id,
-            series_key: self.series_key,
+            series_key: self.series_key.into_service_input(),
             prefix_template: self.prefix_template,
             suffix_template: self.suffix_template,
             padding_width: self.padding_width,
@@ -255,7 +304,9 @@ impl UpdateAutoNumberSeriesResolutionInput {
     ) -> UpdateAutoNumberSeriesInput {
         UpdateAutoNumberSeriesInput {
             branch_id,
-            series_key: self.series_key,
+            series_key: self
+                .series_key
+                .map(AutoNumberSeriesKeyDto::into_service_input),
             prefix_template: self.prefix_template,
             suffix_template: self.suffix_template,
             padding_width: self.padding_width,
@@ -274,7 +325,7 @@ impl UpdateAutoNumberSeriesResolutionInput {
 pub struct AutoNumberSeriesResponseDto {
     pub public_id: String,
     pub branch_public_id: String,
-    pub series_key: String,
+    pub series_key: AutoNumberSeriesKeyDto,
     pub prefix_template: String,
     pub suffix_template: Option<String>,
     pub padding_width: i16,
@@ -289,7 +340,7 @@ impl AutoNumberSeriesResponseDto {
         Self {
             public_id: detail.public_id,
             branch_public_id: detail.branch_public_id,
-            series_key: detail.series_key,
+            series_key: AutoNumberSeriesKeyDto::from_service_output(detail.series_key),
             prefix_template: detail.prefix_template,
             suffix_template: detail.suffix_template,
             padding_width: detail.padding_width,
@@ -304,7 +355,7 @@ impl AutoNumberSeriesResponseDto {
         Self {
             public_id: item.public_id,
             branch_public_id: item.branch_public_id,
-            series_key: item.series_key,
+            series_key: AutoNumberSeriesKeyDto::from_service_output(item.series_key),
             prefix_template: item.prefix_template,
             suffix_template: item.suffix_template,
             padding_width: item.padding_width,
@@ -342,7 +393,25 @@ mod tests {
         .unwrap();
 
         assert_eq!(request.branch_public_id, "branch_1");
-        assert_eq!(request.series_key, "customer");
+        assert_eq!(request.series_key, AutoNumberSeriesKeyDto::Customer);
         assert_eq!(request.reset_policy, AutoNumberResetPolicyDto::Never);
+    }
+
+    #[test]
+    fn create_auto_number_request_accepts_snake_case_series_keys() {
+        let request: CreateAutoNumberSeriesRequestDto = serde_json::from_value(serde_json::json!({
+            "branchPublicId": "branch_1",
+            "seriesKey": "purchase_order",
+            "prefixTemplate": "PO-",
+            "suffixTemplate": null,
+            "paddingWidth": 4,
+            "startNumber": 1,
+            "incrementBy": 1,
+            "resetPolicy": "never",
+            "status": "active"
+        }))
+        .unwrap();
+
+        assert_eq!(request.series_key, AutoNumberSeriesKeyDto::PurchaseOrder);
     }
 }

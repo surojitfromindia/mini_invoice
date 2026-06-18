@@ -1,0 +1,33 @@
+info:
+  name: create chart of account
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{base_url_api_v1}}/chart_of_accounts"
+  body:
+    type: json
+    data: |-
+      {
+        "code": "1019",
+        "namePrimary": "Operating Bank",
+        "nameSecondary": null,
+        "description": "Custom posting account created from Bruno",
+        "parentAccountPublicId": "{{coa_parent_account_public_id}}"
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        let response_body = res.getBody();
+        let coa_account_public_id = response_body?.data?.publicId;
+        bru.setEnvVar("coa_account_public_id", coa_account_public_id)
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

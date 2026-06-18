@@ -1,9 +1,9 @@
 use super::openapi_docs;
 use crate::api::AuthenticatedContext;
 use crate::api::api_response::ApiResponse;
-use crate::api::dto::common_dto::{IntoServiceInput, PublicIdResponse};
+use crate::api::dto::common_dto::{ActionStatusResponse, IntoServiceInput, PublicIdResponse};
 use crate::api::dto::item_dto::{
-    CreateItemRequestDto, ItemListItemResponseDto, ItemListPageQueryDto,
+    CreateItemRequestDto, ItemListItemResponseDto, ItemListPageQueryDto, ItemResponseDto,
 };
 use crate::app_state::AppState;
 use crate::db::listing::PageListResult;
@@ -11,6 +11,7 @@ use crate::errors::app_error::AppError;
 use crate::resolver::item_payload_resolver::ItemPayloadResolver;
 use crate::service::item_service::ItemService;
 use aide::axum::ApiRouter;
+use axum::extract::Path;
 use axum::extract::Query as AxumQuery;
 use axum::http::StatusCode;
 use axum::routing::post;
@@ -19,7 +20,12 @@ use axum_extra::extract::Query as AxumExtraQuery;
 
 pub fn routes() -> ApiRouter<AppState> {
     ApiRouter::from(
-        Router::new().route("/", post(create_item_handler).get(list_items_page_handler)),
+        Router::new()
+            .route("/", post(create_item_handler).get(list_items_page_handler))
+            .route(
+                "/{public_id}",
+                axum::routing::get(get_item_handler).delete(delete_item_handler),
+            ),
     )
     .api_route_docs(
         "/",
@@ -33,6 +39,18 @@ pub fn routes() -> ApiRouter<AppState> {
         openapi_docs::method("get", "item", "listItems", "List items", |op| {
             op.input::<AxumQuery<ItemListPageQueryDto>>();
             op.response::<200, ApiResponse<PageListResult<ItemListItemResponseDto>>>();
+        }),
+    )
+    .api_route_docs(
+        "/{public_id}",
+        openapi_docs::method("get", "item", "getItem", "Get item", |op| {
+            op.response::<200, ApiResponse<ItemResponseDto>>();
+        }),
+    )
+    .api_route_docs(
+        "/{public_id}",
+        openapi_docs::method("delete", "item", "deleteItem", "Delete item", |op| {
+            op.response::<200, ApiResponse<ActionStatusResponse>>();
         }),
     )
 }
@@ -66,6 +84,34 @@ async fn list_items_page_handler(
     Ok(ApiResponse::success(
         ItemListItemResponseDto::page_from_service_output(result),
         "Items fetched",
+        Some(StatusCode::OK),
+    ))
+}
+
+async fn get_item_handler(
+    AuthenticatedContext(ctx): AuthenticatedContext,
+    Path(public_id): Path<String>,
+) -> Result<ApiResponse<ItemResponseDto>, AppError> {
+    let result = ItemService::get_item(&ctx, &public_id).await?;
+
+    Ok(ApiResponse::success(
+        ItemResponseDto::from_service_output(result),
+        "Item fetched",
+        Some(StatusCode::OK),
+    ))
+}
+
+async fn delete_item_handler(
+    AuthenticatedContext(ctx): AuthenticatedContext,
+    Path(public_id): Path<String>,
+) -> Result<ApiResponse<ActionStatusResponse>, AppError> {
+    ItemService::delete_item(&ctx, &public_id).await?;
+
+    Ok(ApiResponse::success(
+        ActionStatusResponse {
+            status: "deleted".to_string(),
+        },
+        "Item deleted",
         Some(StatusCode::OK),
     ))
 }

@@ -1,10 +1,13 @@
+use crate::errors::auto_number_service_errors::AutoNumberServiceError;
 use crate::errors::branch_service_errors::BranchServiceError;
+use crate::errors::coa_service_errors::CoaServiceError;
 use crate::errors::error_codes;
 use crate::errors::error_meta::{ErrorMeta, ErrorMetadata};
 use crate::errors::internal_error_messages;
 use crate::errors::item_service_errors::ItemServiceError;
 use crate::errors::jwt_errors::JwtError;
 use crate::errors::organization_service_errors::OrgServiceError;
+use crate::errors::party_service_errors::PartyServiceError;
 use crate::errors::staff_service_errors::StaffServiceError;
 use crate::errors::user_credential_service_errors::UserCredentialServiceError;
 use crate::errors::user_service_errors::UserServiceError;
@@ -22,6 +25,9 @@ pub enum AppError {
     Org(OrgServiceError),
     Staff(StaffServiceError),
     Branch(BranchServiceError),
+    Coa(CoaServiceError),
+    Party(PartyServiceError),
+    AutoNumber(AutoNumberServiceError),
     Unauthorized,
     Forbidden { permission: String },
     BadRequest { code: &'static str, message: String },
@@ -42,6 +48,9 @@ impl AppError {
             AppError::Org(data) => data.meta(),
             AppError::Staff(data) => data.meta(),
             AppError::Branch(data) => data.meta(),
+            AppError::Coa(data) => data.meta(),
+            AppError::Party(data) => data.meta(),
+            AppError::AutoNumber(data) => data.meta(),
             AppError::Database(data) => data.meta(),
             AppError::Unauthorized => ErrorMeta {
                 code: error_codes::UNAUTHORIZED,

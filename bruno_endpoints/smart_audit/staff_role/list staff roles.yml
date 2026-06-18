@@ -1,0 +1,32 @@
+info:
+  name: list staff roles
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{base_url_api_v1}}/staff_role?page=1&perPage=20"
+  params:
+    - name: page
+      value: "1"
+      type: query
+    - name: perPage
+      value: "20"
+      type: query
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        let response_body = res.getBody();
+        let staff_role_public_id = response_body?.data?.rows?.[0]?.publicId;
+        if (staff_role_public_id) {
+          bru.setEnvVar("staff_role_public_id", staff_role_public_id)
+        }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
